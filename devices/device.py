@@ -33,7 +33,7 @@ class Device(ABC):
     def run(self) -> None:
         self.__client_socket.connect(self.__server_address)
         while True:
-            time.sleep(0.5)
+            time.sleep(5)
             data: Dict[str, str] = self._gather_data()
             self.__send_data(data)
 

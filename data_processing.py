@@ -41,3 +41,27 @@ class DataProcesser:
     
     def get_all(self) -> ResultSet:
         return self.__session.execute("""SELECT * FROM IoT_Example.SensorData""").all()
+
+    def get_average_humidity(self, start: str, end: str):
+        query = """
+                SELECT AVG(humidity) as average_humidity
+                FROM IoT_Example.SensorData
+                WHERE timestamp >= %s
+                 AND timestamp <= %s
+                ALLOW FILTERING
+                """
+        result = self.__session.execute(query, (start, end)).one()
+        return result.average_humidity
+
+
+    def get_average_temperature(self, start: str, end: str):
+        query = """
+                SELECT AVG(temperature) AS average_temperature
+                FROM IoT_Example.SensorData
+                WHERE timestamp >= %s
+                 AND timestamp <= %s
+                ALLOW FILTERING
+                """
+        result = self.__session.execute(query, (start, end)).one()
+        return result.average_temperature
+

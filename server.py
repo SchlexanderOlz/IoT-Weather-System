@@ -14,7 +14,6 @@ ADDRESS = (HOST, PORT)
 
 
 class Server:
-    
     def __init__(self) -> None:
         self.__server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__server.bind(ADDRESS)
@@ -34,7 +33,6 @@ class Server:
                 break
             if not self.__processer.insert(json.loads(buff.decode())):
                 print(f"""[-] Insert of Data failed for set {Fore.CYAN}{buff.decode()}{Style.RESET_ALL}""")
-            print(self.__processer.get_all())
         client_socket.close()
         print(f"""[*] Connection closed from {Fore.BLUE}IP: {client_address[0]} | Port: {client_address[1]}{Style.RESET_ALL}""")
 

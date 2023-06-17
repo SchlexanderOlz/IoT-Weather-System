@@ -1,2 +1,2 @@
-from device import Device
-from thermometer import Thermometer
+from devices.device import Device
+from devices.thermometer import Thermometer
