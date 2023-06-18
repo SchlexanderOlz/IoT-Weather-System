@@ -1,7 +1,7 @@
 from cassandra.cluster import Cluster, ResultSet
 from cassandra.policies import DCAwareRoundRobinPolicy
 from cassandra import ConsistencyLevel
-from typing import List, Tuple, Dict
+from typing import List, Any, Dict
 
 
 class DataProcesser:
@@ -13,6 +13,7 @@ class DataProcesser:
         )
         self.__session = cluster.connect()
         self.__session.default_consistency_level = ConsistencyLevel.ONE
+        self.create()
     
     def create(self) -> None:
         self.__session.execute("""CREATE KEYSPACE IF NOT EXISTS IoT_Example WITH REPLICATION = {
@@ -44,7 +45,7 @@ class DataProcesser:
     def get_all(self) -> ResultSet:
         return self.__session.execute("""SELECT * FROM IoT_Example.SensorData""").all()
 
-    def get_average_humidity(self, start: str, end: str):
+    def get_average_humidity(self, start: str, end: str) -> float:
         query = """
                 SELECT AVG(humidity) as average_humidity
                 FROM IoT_Example.SensorData
@@ -56,10 +57,11 @@ class DataProcesser:
             result = self.__session.execute(query, (start, end)).one()
         except Exception as e:
             print(e)
+            return -1.0
         return result.average_humidity
 
 
-    def get_average_temperature(self, start: str, end: str):
+    def get_average_temperature(self, start: str, end: str) -> float:
         query = """
                 SELECT AVG(temperature) AS average_temperature
                 FROM IoT_Example.SensorData
@@ -71,5 +73,56 @@ class DataProcesser:
             result = self.__session.execute(query, (start, end)).one()
         except Exception as e:
             print(e)
+            return -256
         return result.average_temperature
 
+
+    def get_average_light_level(self, start: str, end: str) -> float:
+        query = """
+                SELECT AVG(light_level) AS average_light_level
+                FROM IoT_Example.SensorData
+                WHERE timestamp >= %s
+                AND timestamp <= %s
+                ALLOW FILTERING
+                """
+        try:
+            result = self.__session.execute(query, (start, end)).one()
+        except Exception as e:
+            print(e)
+            return -1.0
+        return result.average_light_level
+
+
+    def get_average_data_per_day(self, start: str, end: str) -> List[Dict[str, Any]]:
+        query = """
+                SELECT sensor_id, toDate(timestamp) as date,
+                    AVG(temperature) AS average_temperature,
+                    AVG(humidity) AS average_humidity,
+                    AVG(light_level) AS average_light_level
+                FROM IoT_Example.SensorData
+                WHERE timestamp >= %s
+                 AND timestamp <= %s
+                GROUP BY sensor_id, toDate(timestamp)
+                ALLOW FILTERING
+                """
+        try:
+            result = self.__session.execute(query, (start, end)).all()
+        except Exception as e:
+            print(e)
+            return []
+        return result
+
+    def get_most_recent_data(self, sensor_id: str) -> List[Dict[str, Any]]:
+        query = """
+                SELECT *
+                FROM IoT_Example.SensorData
+                WHERE sensor_id = %s
+                ORDER BY timestamp DESC
+                LIMIT 1
+                """
+        try:
+            result = self.__session.execute(query, (sensor_id,)).one()
+        except Exception as e:
+            print(e)
+            return None
+        return result

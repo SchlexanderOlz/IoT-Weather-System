@@ -39,7 +39,6 @@ class Server:
 
 
     def start(self):
-        self.__processer.create()
         self.__server.settimeout(0.5)
         try:
             while True:

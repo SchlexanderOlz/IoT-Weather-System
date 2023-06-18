@@ -4,13 +4,12 @@ from abc import ABC
 from typing import Dict, Any
 import time
 import json
-import hashlib
 from datetime import datetime
 
 
 class Device(ABC):
     def __init__(self, device_name: str) -> None:
-        self.uuid = hashlib.md5(device_name.encode()).hexdigest()
+        self.uuid = device_name
 
     def connect(self, host: str, port: int) -> bool:
         super().__init__()
