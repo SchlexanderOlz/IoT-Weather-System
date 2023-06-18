@@ -4,11 +4,10 @@ from server import Server
 import os
 
 
-# TODO Find a better sollution for serving a front-end API
 class App:
 
     def __init__(self) -> None:
-        self.__processer = DataProcesser([('localhost', 9042)])
+        self.__processer = DataProcesser()
 
 
     def get_user_input(self):
@@ -38,29 +37,24 @@ Enter the action you want to take:
         print("""Enter the end-date of the period (format: '2022-01-01 00:00:00'):""")
         end = input()
 
-        try:
-            data = self.__processer.get_average_humidity(start, end)
-        except Exception as e:
-            print(e)
-            print("Invalid Input!")
-            return
+        
+        data = self.__processer.get_average_humidity(start, end)
+
 
         print(data)
 
 
-    def get_average_temperature(self):
+    def get_average_temperature(self) -> None:
         print("""Enter the start-date of the period (format: '2022-01-01 00:00:00'):""")
         start = input()
 
         print("""Enter the end-date of the period (format: '2022-01-01 00:00:00'):""")
         end = input()
 
-        try:
-            data = self.__processer.get_average_temperature(start, end)
-        except Exception as e:
-            print(e)
-            print("Invalid Input!")
+        if not(start and end):
+            print("Invalid input!")
             return
+        data = self.__processer.get_average_temperature(start, end)
 
         print(data)
 

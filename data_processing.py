@@ -1,16 +1,18 @@
 from cassandra.cluster import Cluster, ResultSet
 from cassandra.policies import DCAwareRoundRobinPolicy
+from cassandra import ConsistencyLevel
 from typing import List, Tuple, Dict
 
 
 class DataProcesser:
-    def __init__(self, contact_points: List[Tuple[str, int]]) -> None:
+    def __init__(self) -> None:
         cluster = Cluster(
-            contact_points=contact_points,
+            contact_points=[('localhost', 9042), ('localhost', 9043)],
             load_balancing_policy=DCAwareRoundRobinPolicy(local_dc='datacenter1'),
             protocol_version=4
         )
         self.__session = cluster.connect()
+        self.__session.default_consistency_level = ConsistencyLevel.ONE
     
     def create(self) -> None:
         self.__session.execute("""CREATE KEYSPACE IF NOT EXISTS IoT_Example WITH REPLICATION = {
@@ -31,7 +33,7 @@ class DataProcesser:
     def insert(self, data: Dict[str, any]) -> bool:
         try:
             self.__session.execute(f"""
-                                INSERT INTO IoT_Example.SensorData ({', '.join([element for element in data.keys()])})
+                                INSERT INTO IoT_Example.SensorData ({', '.join(data.keys())})
                                 VALUES ({', '.join(["%s" for _ in data])})
                                 """, data.values())
         except Exception as e:
@@ -50,7 +52,10 @@ class DataProcesser:
                  AND timestamp <= %s
                 ALLOW FILTERING
                 """
-        result = self.__session.execute(query, (start, end)).one()
+        try:
+            result = self.__session.execute(query, (start, end)).one()
+        except Exception as e:
+            print(e)
         return result.average_humidity
 
 
@@ -62,6 +67,9 @@ class DataProcesser:
                  AND timestamp <= %s
                 ALLOW FILTERING
                 """
-        result = self.__session.execute(query, (start, end)).one()
+        try:
+            result = self.__session.execute(query, (start, end)).one()
+        except Exception as e:
+            print(e)
         return result.average_temperature
 

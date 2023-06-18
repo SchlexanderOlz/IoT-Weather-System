@@ -22,7 +22,7 @@ class Server:
         self.__context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         self.__context.load_cert_chain('cert.pem', 'key.pem')
         
-        self.__processer = DataProcesser([('localhost', 9042)])
+        self.__processer = DataProcesser()
 
 
     def __handle_client(self, client_socket: socket.socket, client_address: Tuple[str, int]):
@@ -33,6 +33,7 @@ class Server:
                 break
             if not self.__processer.insert(json.loads(buff.decode())):
                 print(f"""[-] Insert of Data failed for set {Fore.CYAN}{buff.decode()}{Style.RESET_ALL}""")
+            print(buff.decode())
         client_socket.close()
         print(f"""[*] Connection closed from {Fore.BLUE}IP: {client_address[0]} | Port: {client_address[1]}{Style.RESET_ALL}""")
 
