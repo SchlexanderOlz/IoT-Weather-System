@@ -27,7 +27,6 @@ class Server:
 
     def __handle_client(self, client_socket: socket.socket, client_address: Tuple[str, int]):
         client_socket = self.__context.wrap_socket(client_socket, server_side=True)
-        print(client_socket.server_hostname)
         while True:
             buff: bytes = client_socket.recv(1024)
             if not buff:

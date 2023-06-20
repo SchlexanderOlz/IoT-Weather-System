@@ -22,6 +22,7 @@ Enter the action you want to take:
 3) Show average light-level 
 4) Show average per-day
 5) Show live data
+6) Show all devices
                 """)
             
             decision: int
@@ -44,6 +45,8 @@ Enter the action you want to take:
                     self.show_average_data_per_day()
                 case 5:
                     self.show_live_data()
+                case 6:
+                    self.show_all_devices()
 
 
     def show_average_humidity(self):
@@ -109,6 +112,20 @@ Enter the action you want to take:
                 print(f"    Light-Level:    {element.average_light_level} lux")
 
     def show_live_data(self) -> None:
+        def __loop_live_data_output(name):
+            while True:
+                time.sleep(0.1)
+                data: dict[str, any] = self.__processer.get_most_recent_data(name)
+                os.system('cls' if os.name == 'nt' else 'clear')
+
+                print(f"{Fore.GREEN}Most Recent Data: {Style.RESET_ALL}")
+                if data.temperature:
+                    print(f"    Temperature:    {data.temperature}°C")
+                if data.humidity:
+                    print(f"    Humidity:       {data.humidity}%")
+                if data.light_level:
+                    print(f"    Light-Level:    {data.light_level} lux")
+
         print("Enter the device-name: ")
         name: str = input()
         
@@ -117,23 +134,15 @@ Enter the action you want to take:
             return
 
         try:
-            self.__loop_live_data_output(name)
+            __loop_live_data_output(name)
         except KeyboardInterrupt:
             print("Stopping live data...")
 
-    def __loop_live_data_output(self, name):
-        while True:
-            time.sleep(0.1)
-            data: dict[str, any] = self.__processer.get_most_recent_data(name)
-            os.system('cls' if os.name == 'nt' else 'clear')
+    def show_all_devices(self) -> None:
+        data: dict[str, int] = self.__processer.get_all_devices()
 
-            print(f"{Fore.GREEN}Most Recent Data: {Style.RESET_ALL}")
-            if data.temperature:
-                print(f"    Temperature:    {data.temperature}°C")
-            if data.humidity:
-                print(f"    Humidity:       {data.humidity}%")
-            if data.light_level:
-                print(f"    Light-Level:    {data.light_level} lux")
+        for element in data:
+            print(element.sensor_id)
 
 
 

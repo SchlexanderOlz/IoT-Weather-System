@@ -126,3 +126,10 @@ class DataProcesser:
             print(e)
             return None
         return result
+
+    def get_all_devices(self) -> Dict[str, any]:
+        query = """
+        SELECT sensor_id FROM IoT_Example.SensorData
+        GROUP BY sensor_id
+        """
+        return self.__session.execute(query).all()
