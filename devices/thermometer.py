@@ -11,7 +11,8 @@ class Thermometer(Device):
     def _gather_data(self) -> Dict[str, Any]:
         factor: float = ((time.time() % 1_000) / 80) + time.time() / 1_000_000_000
         data: int = random.uniform(factor + 10.0, 12 + factor)
-        joined_data = super()._gather_data()
+
+        joined_data: dict[str, any] = super()._gather_data()
         joined_data.update({ "temperature" : data })
         return joined_data
 

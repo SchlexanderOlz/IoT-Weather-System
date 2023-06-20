@@ -27,29 +27,32 @@ class Server:
 
     def __handle_client(self, client_socket: socket.socket, client_address: Tuple[str, int]):
         client_socket = self.__context.wrap_socket(client_socket, server_side=True)
+        print(client_socket.server_hostname)
         while True:
             buff: bytes = client_socket.recv(1024)
             if not buff:
                 break
             if not self.__processer.insert(json.loads(buff.decode())):
-                print(f"""[-] Insert of Data failed for set {Fore.CYAN}{buff.decode()}{Style.RESET_ALL}""")
-            print(buff.decode())
+                print(f"[-] Insert of Data failed for set {Fore.CYAN}{buff.decode()}{Style.RESET_ALL}")
+            print(f"[*] New Data from {Fore.GREEN}IP: {client_address[0]} | Port: {client_address[1]}{Style.RESET_ALL}")
         client_socket.close()
-        print(f"""[*] Connection closed from {Fore.BLUE}IP: {client_address[0]} | Port: {client_address[1]}{Style.RESET_ALL}""")
+        print(f"[*] Connection closed from {Fore.BLUE}IP: {client_address[0]} | Port: {client_address[1]}{Style.RESET_ALL}")
 
 
     def start(self):
         self.__server.settimeout(0.5)
         try:
             while True:
+                client_socket: socket.socket
+                client_address: tuple[str, int]
                 try:
                     client_socket, client_address = self.__server.accept()
-                    print(f"""[*] New connection from {Fore.BLUE}IP: {client_address[0]} | Port: {client_address[1]}{Style.RESET_ALL}""")
-
-                    client_thread = threading.Thread(target=self.__handle_client, args=(client_socket, client_address))
-                    client_thread.start()
                 except socket.timeout:
                     continue
+                print(f"""[*] New connection from {Fore.BLUE}IP: {client_address[0]} | Port: {client_address[1]}{Style.RESET_ALL}""")
+
+                client_thread: threading.Thread = threading.Thread(target=self.__handle_client, args=(client_socket, client_address))
+                client_thread.start()
         except KeyboardInterrupt:
             self.__server.close()
             os._exit(0)

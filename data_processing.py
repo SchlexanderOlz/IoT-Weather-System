@@ -1,4 +1,4 @@
-from cassandra.cluster import Cluster, ResultSet
+from cassandra.cluster import Cluster, ResultSet, Session
 from cassandra.policies import DCAwareRoundRobinPolicy
 from cassandra import ConsistencyLevel
 from typing import List, Any, Dict
@@ -11,7 +11,7 @@ class DataProcesser:
             load_balancing_policy=DCAwareRoundRobinPolicy(local_dc='datacenter1'),
             protocol_version=4
         )
-        self.__session = cluster.connect()
+        self.__session: Session = cluster.connect()
         self.__session.default_consistency_level = ConsistencyLevel.ONE
         self.create()
     
@@ -112,7 +112,7 @@ class DataProcesser:
             return []
         return result
 
-    def get_most_recent_data(self, sensor_id: str) -> List[Dict[str, Any]]:
+    def get_most_recent_data(self, sensor_id: str) -> Dict[str, Any]:
         query = """
                 SELECT *
                 FROM IoT_Example.SensorData

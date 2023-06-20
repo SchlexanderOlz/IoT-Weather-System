@@ -23,8 +23,14 @@ Enter the action you want to take:
 4) Show average per-day
 5) Show live data
                 """)
+            
+            decision: int
+            try:
+                decision = int(input())
+            except Exception:
+                continue
 
-            match int(input()):
+            match decision:
                 case 0:
                     print("Exiting...")
                     os._exit(0)
@@ -42,53 +48,54 @@ Enter the action you want to take:
 
     def show_average_humidity(self):
         print("""Enter the start-date of the period (format: '2022-01-01 00:00:00'):""")
-        start = input()
+        start: str = input()
 
         print("""Enter the end-date of the period (format: '2022-01-01 00:00:00'):""")
-        end = input()
-        data = self.__processer.get_average_humidity(start, end)
+        end: str = input()
+        data: float = self.__processer.get_average_humidity(start, end)
 
-        print(data)
+        print(f"{data}%")
 
 
     def show_average_temperature(self) -> None:
         print("""Enter the start-date of the period (format: '2022-01-01 00:00:00'):""")
-        start = input()
+        start: str = input()
 
         print("""Enter the end-date of the period (format: '2022-01-01 00:00:00'):""")
-        end = input()
+        end: str = input()
 
         if not(start and end):
             print("Invalid input!")
             return
-        data = self.__processer.get_average_temperature(start, end)
+        data: float = self.__processer.get_average_temperature(start, end)
 
-        print(data)
+        print(f"{data}°C")
         
     def show_average_light_level(self) -> None:
         print("""Enter the start-date of the period (format: '2022-01-01 00:00:00'):""")
-        start = input()
+        start: str = input()
 
         print("""Enter the end-date of the period (format: '2022-01-01 00:00:00'):""")
-        end = input()
+        end: str = input()
 
         if not(start and end):
             print("Invalid input!")
             return
         data = self.__processer.get_average_light_level(start, end)
-        print(data)
+        print(f"{data} lux")
 
 
     def show_average_data_per_day(self):
         print("""Enter the start-date of the period (format: '2022-01-01 00:00:00'):""")
-        start = input()
+        start: str = input()
 
         print("""Enter the end-date of the period (format: '2022-01-01 00:00:00'):""")
-        end = input()
+        end: str = input()
 
         if not(start and end):
             print("Invalid input!")
             return
+
         data = self.__processer.get_average_data_per_day(start, end)
 
         for element in data:
@@ -117,7 +124,7 @@ Enter the action you want to take:
     def __loop_live_data_output(self, name):
         while True:
             time.sleep(0.1)
-            data = self.__processer.get_most_recent_data(name)
+            data: dict[str, any] = self.__processer.get_most_recent_data(name)
             os.system('cls' if os.name == 'nt' else 'clear')
 
             print(f"{Fore.GREEN}Most Recent Data: {Style.RESET_ALL}")
