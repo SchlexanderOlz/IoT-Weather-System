@@ -1,6 +1,5 @@
 from data_processing import DataProcesser
 import environment
-from server import Server
 import os
 from colorama import Fore, Style
 import time
@@ -57,7 +56,7 @@ Enter the action you want to take:
         end: str = input()
         data: float = self.__processer.get_average_humidity(start, end)
 
-        print(f"{data}%")
+        print(f"{data: .2f}%")
 
 
     def show_average_temperature(self) -> None:
@@ -72,7 +71,7 @@ Enter the action you want to take:
             return
         data: float = self.__processer.get_average_temperature(start, end)
 
-        print(f"{data}°C")
+        print(f"{data: .2f}°C")
         
     def show_average_light_level(self) -> None:
         print("""Enter the start-date of the period (format: '2022-01-01 00:00:00'):""")
@@ -105,9 +104,9 @@ Enter the action you want to take:
             print(f"{Fore.GREEN}{element.sensor_id}:{Style.RESET_ALL}")
             print(f"    Date:           {element.date}")
             if element.average_temperature:
-                print(f"    Temperature:    {element.average_temperature}°C")
+                print(f"    Temperature:    {element.average_temperature: .2f}°C")
             if element.average_humidity:
-                print(f"    Humidity:       {element.average_humidity}%")
+                print(f"    Humidity:       {element.average_humidity: 2f}%")
             if element.average_light_level:
                 print(f"    Light-Level:    {element.average_light_level} lux")
 
@@ -116,13 +115,18 @@ Enter the action you want to take:
             while True:
                 time.sleep(0.1)
                 data: dict[str, any] = self.__processer.get_most_recent_data(name)
+
+                if not data:
+                    print(f"{Fore.RED}Device does not exist!{Style.RESET_ALL}\nValid devices are:")
+                    self.show_all_devices()
+                    break
                 os.system('cls' if os.name == 'nt' else 'clear')
 
                 print(f"{Fore.GREEN}Most Recent Data: {Style.RESET_ALL}")
                 if data.temperature:
-                    print(f"    Temperature:    {data.temperature}°C")
+                    print(f"    Temperature:    {data.temperature: .2f}°C")
                 if data.humidity:
-                    print(f"    Humidity:       {data.humidity}%")
+                    print(f"    Humidity:       {data.humidity: .2f}%")
                 if data.light_level:
                     print(f"    Light-Level:    {data.light_level} lux")
 
@@ -141,8 +145,9 @@ Enter the action you want to take:
     def show_all_devices(self) -> None:
         data: dict[str, int] = self.__processer.get_all_devices()
 
+        print(f"{Fore.GREEN}Devices:{Style.RESET_ALL}")
         for element in data:
-            print(element.sensor_id)
+            print("\t" + element.sensor_id)
 
 
 

@@ -1,5 +1,5 @@
 from cassandra.cluster import Cluster, ResultSet, Session
-from cassandra.policies import DCAwareRoundRobinPolicy
+from cassandra.policies import DCAwareRoundRobinPolicy, ConstantReconnectionPolicy
 from cassandra import ConsistencyLevel
 from typing import List, Any, Dict
 
@@ -7,7 +7,7 @@ from typing import List, Any, Dict
 class DataProcesser:
     def __init__(self) -> None:
         cluster = Cluster(
-            contact_points=[('localhost', 9042), ('localhost', 9043)],
+            contact_points=[('localhost', 9042), ('localhost', 9043), ('localhost', 9044)],
             load_balancing_policy=DCAwareRoundRobinPolicy(local_dc='datacenter1'),
             protocol_version=4
         )
