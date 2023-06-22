@@ -15,6 +15,6 @@ class B7490(Device):
         temperature: float = random.uniform(factor + 10.0, 12 + factor)
         humidity: float = random.uniform(0 + factor * 3, (100 - temperature / 5) - factor * 3)
         light_level: float = random.uniform(100 + factor * 50, 80_000 + factor * 30 + temperature * 100)
-        
+
         base_data.update({"humidity" : humidity, "temperature" : temperature, "light_level" : light_level})
         return base_data

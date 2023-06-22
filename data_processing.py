@@ -22,7 +22,8 @@ class DataProcesser:
                                 }""")
 
         self.__session.execute("""CREATE TABLE IF NOT EXISTS IoT_Example.SensorData (
-                                sensor_id TEXT,
+                                sensor_id UUID,
+                                sensor_name TEXT,
                                 timestamp TIMESTAMP,
                                 temperature FLOAT,
                                 humidity FLOAT,
