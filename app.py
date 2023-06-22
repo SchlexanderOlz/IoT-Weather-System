@@ -8,7 +8,8 @@ import time
 class App:
 
     def __init__(self) -> None:
-        self.__processer = DataProcesser()
+        # self.__processer = DataProcesser()
+        pass
 
 
     def get_user_input(self):

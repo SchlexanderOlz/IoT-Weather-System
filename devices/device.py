@@ -15,12 +15,12 @@ class Device(ABC):
         super().__init__()
         self.__server_address: tuple[str, int] = (host, port)
 
-        # self.__context: ssl.SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        # self.__context.check_hostname = False
-        # self.__context.verify_mode = ssl.CERT_NONE
+        self.__context: ssl.SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self.__context.check_hostname = False
+        self.__context.verify_mode = ssl.CERT_NONE
 
         self.__client_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self.__client_socket = self.__context.wrap_socket(self.__client_socket, server_hostname=host)
+        self.__client_socket = self.__context.wrap_socket(self.__client_socket, server_hostname=host)
 
     def __send_data(self, data: Dict[str, str]) -> None:
         self.__client_socket.send(json.dumps(data).encode('utf-8'))

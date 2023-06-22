@@ -13,11 +13,11 @@ pub fn display_new_data(stream: &TcpStream, data: &str) {
     println!("{}", message)
 }
 
-pub fn display_closed(stream: &TcpStream) {
+pub fn display_closed(address: &str) {
     let message = format!(
         "[*] Connection closed from {} {}",
         "IP:".blue(),
-        stream.peer_addr().unwrap().to_string().blue()
+        address.blue()
     );
 
     println!("{}", message);
@@ -28,6 +28,15 @@ pub fn display_new_connection(stream: &TcpStream) {
         "[*] New connection from {} {}",
         "IP:".blue(),
         stream.peer_addr().unwrap().to_string().blue()
+    );
+
+    println!("{}", message)
+}
+
+pub fn display_receive_wrong_msg(stream: &TcpStream) {
+    let message = format!(
+        "[-] Received data from Address: {} was formatted wrong!",
+        stream.peer_addr().unwrap().to_string().red()
     );
 
     println!("{}", message)
