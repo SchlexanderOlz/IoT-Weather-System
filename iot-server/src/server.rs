@@ -64,7 +64,7 @@ impl Server {
                 None
             }
         }
-    
+
         async fn insert_json(
             client_stream: &SslStream<TcpStream>,
             data_str: &str,
@@ -80,7 +80,7 @@ impl Server {
         }
 
         let address = client_stream.get_ref().peer_addr().unwrap().to_string();
-    
+
         loop {
             let mut buff = [0u8; 1024];
             match client_stream.read(&mut buff) {
@@ -91,13 +91,12 @@ impl Server {
                         insert_json(&client_stream, &data_str, &self.processor).await;
                     }
                 }
-                Err(err) => {
-                    println!("[-] Failed to read from stream: {}", err);
+                Err(_) => {
                     break;
                 }
             }
         }
-    
+
         logging::display_closed(&address);
     }
 }
