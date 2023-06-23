@@ -9,15 +9,16 @@ from datetime import datetime
 
 class Device(ABC):
     def __init__(self, device_name: str) -> None:
+        super().__init__()
         self.uuid: str = device_name
 
     def connect(self, host: str, port: int) -> bool:
-        super().__init__()
         self.__server_address: tuple[str, int] = (host, port)
 
         self.__context: ssl.SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self.__context.check_hostname = False
         self.__context.verify_mode = ssl.CERT_NONE
+        self.__context.load_cert_chain(certfile='/home/schlexander/Coding/IoT-Cassandra/devices/keys/client_cert.pem', keyfile='/home/schlexander/Coding/IoT-Cassandra/devices/keys/client_key.pem')
 
         self.__client_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__client_socket = self.__context.wrap_socket(self.__client_socket, server_hostname=host)

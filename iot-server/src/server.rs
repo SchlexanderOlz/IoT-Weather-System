@@ -1,5 +1,5 @@
-use data_processing::{DataProcessor, SensorData};
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
+use data_processing::{DataProcessor};
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream, SslVerifyMode};
 use serde_json;
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
@@ -22,15 +22,19 @@ impl Server {
         let mut ssl_acceptor = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
         ssl_acceptor
             .set_certificate_chain_file(
-                "/home/schlexander/Coding/IoT-Cassandra/iot-server/src/cert.pem",
+                "/home/schlexander/Coding/IoT-Cassandra/iot-server/keys/cert.pem",
             )
             .unwrap();
         ssl_acceptor
             .set_private_key_file(
-                "/home/schlexander/Coding/IoT-Cassandra/iot-server/src/key.pem",
+                "/home/schlexander/Coding/IoT-Cassandra/iot-server/keys/key.pem",
                 SslFiletype::PEM,
             )
             .unwrap();
+        // Allows everyone who certified with the client_cert
+        ssl_acceptor.set_ca_file("/home/schlexander/Coding/IoT-Cassandra/iot-server/keys/client_cert.pem").unwrap();
+
+        ssl_acceptor.set_verify(SslVerifyMode::PEER | SslVerifyMode::FAIL_IF_NO_PEER_CERT);
 
         Self {
             server: listener,
@@ -47,10 +51,11 @@ impl Server {
 
             tokio::spawn(async move {
                 let client_stream = stream.unwrap();
-                logging::display_new_connection(&client_stream);
 
-                let ssl_stream = self_copy.ssl_acceptor.accept(client_stream).unwrap();
-                self_copy.handle_client(ssl_stream).await;
+                if let Ok(ssl_stream) = self_copy.ssl_acceptor.accept(client_stream) {
+                    logging::display_new_connection(ssl_stream.get_ref());
+                    self_copy.handle_client(ssl_stream).await;
+                };
             });
         }
     }
@@ -84,16 +89,15 @@ impl Server {
         loop {
             let mut buff = [0u8; 1024];
             match client_stream.read(&mut buff) {
-                Ok(bytes_read) if bytes_read == 0 => break,
                 Ok(bytes_read) => {
+                    if bytes_read == 0 { break }
+
                     if let Some(data_str) = decode_bytes(&buff[..bytes_read]).await {
-                        logging::display_new_data(client_stream.get_ref(), &data_str);
+                        logging::display_new_data(client_stream.get_ref());
                         insert_json(&client_stream, &data_str, &self.processor).await;
                     }
                 }
-                Err(_) => {
-                    break;
-                }
+                Err(_) => break
             }
         }
 

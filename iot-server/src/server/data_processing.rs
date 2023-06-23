@@ -27,7 +27,9 @@ impl DataProcessor {
     }
 
     pub async fn insert(&self, data: SensorData) -> Result<(), Box<dyn Error>> {
-        self.collection.insert_one(data, None).await.expect("[-] Value could not be inserted!");
-        Ok(())
+        self.collection.insert_one(data, None)
+        .await
+        .map(|_| ())
+        .map_err(|err| Box::new(err) as Box<dyn Error>)
     }
 }

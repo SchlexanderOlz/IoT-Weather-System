@@ -1,13 +1,11 @@
 use std::net::{TcpStream};
 use colored::Colorize;
 
-pub fn display_new_data(stream: &TcpStream, data: &str) {
+pub fn display_new_data(stream: &TcpStream) {
     let message = format!(
-        "[*] New Data from {} {} {} {}",
+        "[*] New Data from {} {}",
         "IP:".green(),
         stream.peer_addr().unwrap().to_string().green(),
-        "Data: ",
-        data
     );
 
     println!("{}", message)
