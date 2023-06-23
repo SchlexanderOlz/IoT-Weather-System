@@ -48,10 +48,9 @@ impl Server {
 
         for stream in arc_self.server.incoming() {
             let self_copy = Arc::clone(&arc_self); // Move this line outside the loop
-
             tokio::spawn(async move {
+                print!("New connection tried");
                 let client_stream = stream.unwrap();
-
                 if let Ok(ssl_stream) = self_copy.ssl_acceptor.accept(client_stream) {
                     logging::display_new_connection(ssl_stream.get_ref());
                     self_copy.handle_client(ssl_stream).await;
