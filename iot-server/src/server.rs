@@ -1,10 +1,11 @@
 use data_processing::{DataProcessor};
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream, SslVerifyMode};
-use serde_json;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
+use serde_json::{self, Value, json};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::sync::Arc;
+use chrono::{Utc};
 
 mod data_processing;
 mod logging;
@@ -19,22 +20,18 @@ impl Server {
     pub async fn new(address: &str) -> Self {
         let processor = DataProcessor::new();
         let listener = TcpListener::bind(address).expect("Couldn't bind to port");
-        let mut ssl_acceptor = SslAcceptor::mozilla_modern_v5(SslMethod::tls()).unwrap();
+        let mut ssl_acceptor = SslAcceptor::mozilla_modern(SslMethod::tls()).unwrap();
         ssl_acceptor
             .set_certificate_chain_file(
-                "/home/schlexander/Coding/IoT-Cassandra/iot-server/keys/cert.pem",
+                "keys/cert.pem",
             )
             .unwrap();
         ssl_acceptor
             .set_private_key_file(
-                "/home/schlexander/Coding/IoT-Cassandra/iot-server/keys/key.pem",
+                "keys/key.pem",
                 SslFiletype::PEM,
             )
             .unwrap();
-        // Allows everyone who certified with the client_cert
-        ssl_acceptor.set_ca_file("/home/schlexander/Coding/IoT-Cassandra/iot-server/keys/client_cert.pem").unwrap();
-
-        ssl_acceptor.set_verify(SslVerifyMode::PEER | SslVerifyMode::FAIL_IF_NO_PEER_CERT);
 
         Self {
             server: listener,
@@ -49,7 +46,6 @@ impl Server {
         for stream in arc_self.server.incoming() {
             let self_copy = Arc::clone(&arc_self); // Move this line outside the loop
             tokio::spawn(async move {
-                print!("New connection tried");
                 let client_stream = stream.unwrap();
                 if let Ok(ssl_stream) = self_copy.ssl_acceptor.accept(client_stream) {
                     logging::display_new_connection(ssl_stream.get_ref());
@@ -74,13 +70,22 @@ impl Server {
             data_str: &str,
             processor: &DataProcessor,
         ) {
-            if let Ok(sensor_data) = serde_json::from_str(data_str) {
-                if let Err(_) = processor.insert(sensor_data).await {
-                    logging::display_receive_wrong_msg(client_stream.get_ref());
+            let mut data_json: Value = match serde_json::from_str(data_str) {
+                Ok(value) => value,
+                Err(_) => {
+                    println!("[-] Json could not be parsed");
+                    return;
                 }
-            } else {
-                println!("[-] Failed to parse data: {}", data_str);
+            };
+
+            data_json["timestamp"] = json!(Utc::now().format("%Y-%m-%d %H:%M:%S").to_string());
+
+            println!("{}", data_json.to_string());
+            let sensor_data = serde_json::from_value(data_json).unwrap();
+            if let Err(_) = processor.insert(sensor_data).await {
+                logging::display_receive_wrong_msg(client_stream.get_ref());
             }
+            
         }
 
         let address = client_stream.get_ref().peer_addr().unwrap().to_string();
@@ -96,7 +101,7 @@ impl Server {
                         insert_json(&client_stream, &data_str, &self.processor).await;
                     }
                 }
-                Err(_) => break
+                Err(err) => println!("{}", err.to_string())
             }
         }
 

@@ -19,8 +19,8 @@ impl DataProcessor {
     pub async fn new() -> Result<DataProcessor, Box<dyn Error>> {
         let client = Client::with_uri_str("mongodb://localhost:27017").await?;
         let db = client.database("IoT-DB");
-        // db.run_command(doc! {"create": "SensorData"}, None)
-        //    .await?;
+         db.run_command(doc! {"create": "SensorData"}, None)
+            .await?;
         let collection = db.collection("SensorData");
 
         Ok(DataProcessor { collection })
