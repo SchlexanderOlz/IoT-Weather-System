@@ -1,4 +1,4 @@
-from devices import Device
+from device import Device
 from typing import Dict, Any
 import random
 import time
@@ -18,5 +18,6 @@ class Thermometer(Device):
 
 
 if __name__ == "__main__":
-    therm = Thermometer('127.0.0.1', 3000, 'my_thermometer')
+    therm = Thermometer('my_thermometer')
+    therm.connect('192.168.8.181', 3000)
     therm.run()
