@@ -1,8 +1,8 @@
 use mongodb::{bson::doc, Client, Collection};
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::prelude::*;
 use std::{error::Error};
+use std::mem::take;
+
 
 #[derive(Serialize, Deserialize)]
 pub struct SensorData {
@@ -13,19 +13,29 @@ pub struct SensorData {
     light_level: Option<f32>,
 }
 
+impl Clone for SensorData {
+    fn clone(&self) -> Self {
+        Self { sensor_id: self.sensor_id.clone(), timestamp: self.timestamp.clone(), temperature: self.temperature, humidity: self.humidity, light_level: self.light_level }
+    }
+}
+
+
+const MIN_CACHE_SIZE: usize = 2000;
+const MONGO_DB_URL: &str = "mongodb://192.168.8.127:27017";
 
 pub struct DataProcessor {
     collection: Option<Collection<SensorData>>,
-    cache_file: File
+    cache: Vec<SensorData>
 }
+
 
 impl DataProcessor {
     pub async fn new() -> Result<DataProcessor, Box<dyn Error>> {
-        Ok(DataProcessor { collection: DataProcessor::connect().await, cache_file: File::create("cache.json")? })
+        Ok(DataProcessor { collection: DataProcessor::connect().await, cache: Vec::with_capacity(MIN_CACHE_SIZE) })
     }
 
     async fn connect() -> Option<Collection<SensorData>> {
-        let client = match Client::with_uri_str("mongodb://localhost:27017").await {
+        let client = match Client::with_uri_str(MONGO_DB_URL).await {
             Ok(client) => client,
             Err(_) => return None
         };
@@ -38,37 +48,35 @@ impl DataProcessor {
     }
 
 
-    pub async fn insert(&mut self, data: SensorData) -> Result<(), Box<dyn Error>> {
+    pub async fn insert(&mut self, data: Vec<SensorData>) -> Result<(), Box<dyn Error>> {
+        async fn insert_mongodb(collection: &Collection<SensorData>, data: Vec<SensorData>) -> Result<(), Box<dyn Error>> {
+            collection.insert_many(data, None)
+            .await
+            .map(|_| ())
+            .map_err(|err| Box::new(err) as Box<dyn Error>)
+        }
+
         if let Some(collection) = &self.collection {
-            todo!("Add inserting of json cache here");
-            if let Err(err) = self.insert_mongodb(&collection, data).await {
+            if let Err(err) = insert_mongodb(&collection, data.clone()).await {
                 self.collection = None;
+
+                let mut data_copy = data.clone();
+                self.cache.append(&mut data_copy);
                 return Err(err)
             }
+            if self.cache.is_empty() {
+                return Ok(())
+            }
+            let cache = take(&mut self.cache);
+            insert_mongodb(collection, cache).await?;
             Ok(())
         } else {
             self.collection = DataProcessor::connect().await;
-            self.insert_cache(data)
+            let mut data_copy = data.clone();
+            self.cache.append(&mut data_copy);
+            Ok(())
         }
     }
 
-    async fn insert_mongodb(&self, collection: &Collection<SensorData>, data: SensorData) -> Result<(), Box<dyn Error>> {
-        collection.insert_one(data, None)
-        .await
-        .map(|_| ())
-        .map_err(|err| Box::new(err) as Box<dyn Error>)
-    }
 
-    fn insert_cache(&self, data: SensorData) -> Result<(), Box<dyn Error>> {
-        let json = serde_json::to_string(&data)?;
-        writeln!(self.cache_file, "{}", json)?;
-        Ok(())
-    }
-
-    fn send_cache_to_db(&self) {
-        let buf;
-        self.cache_file.read_to_end(buf);
-        
-        todo!("Implement sending of cache")
-    }
 }

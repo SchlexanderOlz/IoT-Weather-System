@@ -156,6 +156,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "circular-queue"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d34327ead1c743a10db339de35fb58957564b99d248a67985c55638b22c59b5"
+dependencies = [
+ "version_check",
+]
+
+[[package]]
 name = "colored"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -534,6 +543,7 @@ name = "iot-server"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "circular-queue",
  "colored",
  "mongodb",
  "openssl",
