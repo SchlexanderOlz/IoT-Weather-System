@@ -1,11 +1,13 @@
 use data_processing::{DataProcessor};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
-use serde_json::{self, Value, json};
+use serde_json::{self, Value};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::str;
-use std::sync::{Arc};
+use std::sync::{Arc, Mutex};
 use chrono::{Utc};
+
+use crate::server::data_processing::sensor_data::SensorData;
 
 
 mod data_processing;
@@ -14,7 +16,7 @@ mod logging;
 pub struct Server {
     server: TcpListener,
     ssl_acceptor: SslAcceptor,
-    processor: DataProcessor,
+    processor: Mutex<DataProcessor>,
 }
 
 impl Server {
@@ -37,26 +39,25 @@ impl Server {
         Self {
             server: listener,
             ssl_acceptor: ssl_acceptor.build(),
-            processor: processor.await.unwrap(),
+            processor: Mutex::new(processor.await.unwrap()),
         }
     }
 
-    pub fn listen(self) {
+    pub async fn listen(self) {
         let arc_self = Arc::new(self);
 
         for stream in arc_self.server.incoming() {
-            let mut self_copy = Arc::clone(&arc_self);
+            let self_copy = Arc::clone(&arc_self);
             let client_stream = stream.unwrap();
             if let Ok(ssl_stream) = self_copy.ssl_acceptor.accept(client_stream) {
                 logging::display_new_connection(ssl_stream.get_ref());
-    
-                let self_copy = Arc::get_mut(&mut self_copy).unwrap();
-                self_copy.handle_client(ssl_stream);
+
+                self_copy.handle_client(ssl_stream).await;
             }
         }
     }
 
-    async fn handle_client(&mut self, mut client_stream: SslStream<TcpStream>) {
+    async fn handle_client(&self, mut client_stream: SslStream<TcpStream>) {
         async fn decode_bytes(data: &[u8]) -> Option<String> {
             if let Ok(data_str) = str::from_utf8(data) {
                 Some(data_str.to_string())
@@ -79,13 +80,12 @@ impl Server {
                 }
             };
         
-            data_json["timestamp"] = json!(Utc::now().format("%Y-%m-%d %H:%M:%S").to_string());
+            data_json["timestamp"] = serde_json::to_value(Utc::now()).unwrap();
         
-            println!("{}", data_json.to_string());
-            let sensor_data = serde_json::from_value(data_json).unwrap();
-            processor.insert(sensor_data).await;
-            logging::display_receive_wrong_msg(client_stream.get_ref());
-
+            let sensor_data: SensorData = serde_json::from_value(data_json).unwrap();
+            if let Err(err) = processor.insert(vec![sensor_data]).await {
+                logging::display_receive_wrong_msg(client_stream.get_ref(), err);
+            }
         }
 
         let address = client_stream.get_ref().peer_addr().unwrap().to_string();
@@ -98,7 +98,8 @@ impl Server {
 
                     if let Some(data_str) = decode_bytes(&buff[..bytes_read]).await {
                         logging::display_new_data(client_stream.get_ref());
-                        insert_json(&client_stream, &data_str, &mut self.processor).await;
+                        let mut processor = self.processor.lock().unwrap();
+                        insert_json(&client_stream, &data_str, &mut processor).await;
                     }
                 }
                 Err(err) => println!("{}", err.to_string())
@@ -107,4 +108,5 @@ impl Server {
 
         logging::display_closed(&address);
     }
+
 }

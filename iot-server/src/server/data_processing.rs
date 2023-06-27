@@ -1,23 +1,11 @@
 use mongodb::{bson::doc, Client, Collection};
-use serde::{Deserialize, Serialize};
 use std::{error::Error};
 use std::mem::take;
+use no_connection_error::NoConnectionError;
+use sensor_data::SensorData;
 
-
-#[derive(Serialize, Deserialize)]
-pub struct SensorData {
-    sensor_id: String,
-    timestamp: String,
-    temperature: Option<f32>,
-    humidity: Option<f32>,
-    light_level: Option<f32>,
-}
-
-impl Clone for SensorData {
-    fn clone(&self) -> Self {
-        Self { sensor_id: self.sensor_id.clone(), timestamp: self.timestamp.clone(), temperature: self.temperature, humidity: self.humidity, light_level: self.light_level }
-    }
-}
+pub mod sensor_data;
+mod no_connection_error;
 
 
 const MIN_CACHE_SIZE: usize = 2000;
@@ -74,7 +62,7 @@ impl DataProcessor {
             self.collection = DataProcessor::connect().await;
             let mut data_copy = data.clone();
             self.cache.append(&mut data_copy);
-            Ok(())
+            Err(Box::new(NoConnectionError))
         }
     }
 

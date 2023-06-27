@@ -1,5 +1,6 @@
 use std::net::{TcpStream};
 use colored::Colorize;
+use std::error::Error;
 
 pub fn display_new_data(stream: &TcpStream) {
     let message = format!(
@@ -31,10 +32,11 @@ pub fn display_new_connection(stream: &TcpStream) {
     println!("{}", message)
 }
 
-pub fn display_receive_wrong_msg(stream: &TcpStream) {
+pub fn display_receive_wrong_msg(stream: &TcpStream, err: Box<dyn Error>) {
     let message = format!(
-        "[-] Received data from Address: {} was formatted wrong!",
-        stream.peer_addr().unwrap().to_string().red()
+        "[-] Received data from Address: {} Err: {}",
+        stream.peer_addr().unwrap().to_string().red(),
+        err
     );
 
     println!("{}", message)

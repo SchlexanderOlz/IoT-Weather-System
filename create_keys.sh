@@ -1,3 +1,5 @@
+sudo apt-get install libssl-dev
+
 cd iot-server
 mkdir keys 2>/dev/null
 cd keys
