@@ -44,14 +44,13 @@ void setup()
 
 
   // Connect to server
-  connection.setInsecure();
-  Serial.printf("[*]Trying to connect to server on IP: %s Port: %d\n", IOT_HOST);
 
-  if (!connection.connect(IOT_HOST)) {
+  if (!connect()) {
     Serial.println("[-]Connection to server failed");
     return;
+  } else {
+    Serial.println("[*]Connected to server");
   }
-  Serial.println("[*]Connected to server");
 
   Serial.println("[*]Connecting to thermometer");
   thermometer = SimpleDHT11(DHT_PIN);
@@ -73,8 +72,21 @@ void loop()
 
   Serial.println("[*]Sending data");
   if (!send_data(data)) {
-    Serial.println("[-]Failed to send data to server");
+    Serial.println("[-]No connection to server");
+    if (connect()) {
+      Serial.println("[*]Reconnected to server");
+    }
   }
+}
+
+bool connect() {
+  connection.setInsecure();
+  Serial.printf("[*]Trying to connect to server on IP: %s Port: %d\n", IOT_HOST);
+  return (bool)connection.connect(IOT_HOST);
+}
+
+bool send_data(string data) {
+  return (bool)connection.print(data.c_str());
 }
 
 pair<float, float> measure_temperature() {
@@ -98,7 +110,3 @@ string gather_data() {
   return data_stream.str();
 }
 
-
-bool send_data(string data) {
-  return (bool)connection.print(data.c_str());
-}
