@@ -4,9 +4,9 @@ use serde_json::{self, Value};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use chrono::{Utc};
-use tokio::runtime::Runtime;
+use tokio::sync::Mutex;
 
 use crate::server::data_processing::sensor_data::SensorData;
 
@@ -54,10 +54,7 @@ impl Server {
                 logging::display_new_connection(ssl_stream.get_ref());
 
                 tokio::task::spawn(async move { 
-                    let rt = Runtime::new().unwrap();
-                    rt.block_on(async {
-                        self_copy.handle_client(ssl_stream).await; 
-                    });
+                    self_copy.handle_client(ssl_stream).await; 
                 });
             }
         }
@@ -105,9 +102,9 @@ impl Server {
                     if let Some(data_str) = decode_bytes(&buff[..bytes_read]).await {
                         logging::display_new_data(client_stream.get_ref());
 
-                        if let Ok(mut processor) = self.processor.lock() {
-                            insert_json(&client_stream, &data_str, &mut *processor).await;
-                        }
+                        let mut processor = self.processor.lock().await;
+                        insert_json(&client_stream, &data_str, &mut *processor).await;
+                        
                     }
                 }
                 Err(err) => println!("{}", err.to_string())

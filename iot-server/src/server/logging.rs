@@ -1,10 +1,12 @@
 use std::net::{TcpStream};
 use colored::Colorize;
 use std::error::Error;
+use chrono::Utc;
 
 pub fn display_new_data(stream: &TcpStream) {
     let message = format!(
-        "[*] New Data from {} {}",
+        "[*] {} New Data from {} {}",
+        Utc::now().to_string(),
         "IP:".green(),
         stream.peer_addr().unwrap().to_string().green(),
     );
