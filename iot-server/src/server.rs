@@ -6,6 +6,7 @@ use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::sync::{Arc, Mutex};
 use chrono::{Utc};
+use tokio::runtime::Runtime;
 
 use crate::server::data_processing::sensor_data::SensorData;
 
@@ -16,12 +17,12 @@ mod logging;
 pub struct Server {
     server: TcpListener,
     ssl_acceptor: SslAcceptor,
-    processor: Mutex<DataProcessor>,
+    processor: Arc<Mutex<DataProcessor>>,
 }
 
 impl Server {
     pub async fn new(address: &str) -> Self {
-        let processor = DataProcessor::new();
+        let processor = DataProcessor::new().await.unwrap();
         let listener = TcpListener::bind(address).expect("Couldn't bind to port");
         let mut ssl_acceptor = SslAcceptor::mozilla_modern(SslMethod::tls()).unwrap();
         ssl_acceptor
@@ -39,7 +40,7 @@ impl Server {
         Self {
             server: listener,
             ssl_acceptor: ssl_acceptor.build(),
-            processor: Mutex::new(processor.await.unwrap()),
+            processor: Arc::new(Mutex::new(processor)),
         }
     }
 
@@ -52,7 +53,12 @@ impl Server {
             if let Ok(ssl_stream) = self_copy.ssl_acceptor.accept(client_stream) {
                 logging::display_new_connection(ssl_stream.get_ref());
 
-                self_copy.handle_client(ssl_stream).await;
+                tokio::task::spawn(async move { 
+                    let rt = Runtime::new().unwrap();
+                    rt.block_on(async {
+                        self_copy.handle_client(ssl_stream).await; 
+                    });
+                });
             }
         }
     }
@@ -98,8 +104,10 @@ impl Server {
 
                     if let Some(data_str) = decode_bytes(&buff[..bytes_read]).await {
                         logging::display_new_data(client_stream.get_ref());
-                        let mut processor = self.processor.lock().unwrap();
-                        insert_json(&client_stream, &data_str, &mut processor).await;
+
+                        if let Ok(mut processor) = self.processor.lock() {
+                            insert_json(&client_stream, &data_str, &mut *processor).await;
+                        }
                     }
                 }
                 Err(err) => println!("{}", err.to_string())

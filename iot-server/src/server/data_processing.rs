@@ -11,10 +11,14 @@ mod no_connection_error;
 const MIN_CACHE_SIZE: usize = 2000;
 const MONGO_DB_URL: &str = "mongodb://192.168.8.127:27017";
 
+
 pub struct DataProcessor {
     collection: Option<Collection<SensorData>>,
     cache: Vec<SensorData>
 }
+
+unsafe impl Send for DataProcessor {}
+
 
 
 impl DataProcessor {
