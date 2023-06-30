@@ -1,7 +1,7 @@
-use std::net::{TcpStream};
+use chrono::Utc;
 use colored::Colorize;
 use std::error::Error;
-use chrono::Utc;
+use std::net::TcpStream;
 
 pub fn display_new_data(stream: &TcpStream) {
     let message = format!(
