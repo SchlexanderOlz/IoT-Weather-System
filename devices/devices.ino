@@ -1,3 +1,4 @@
+#include <Adafruit_BMP085.h>
 #include <BH1750.h>
 #include <Wire.h>
 #include <SimpleDHT.h>
@@ -8,6 +9,7 @@
 #include <utility>
 #include <sstream>
 #include <exception>
+#include <queue>
 
 #define WIFI "ScholzLAN", "#ScholzLAN!"
 #define IOT_HOST "192.168.8.181", 3000U
@@ -35,6 +37,8 @@ namespace device
   WiFiClientSecure connection;
   SimpleDHT11 thermometer;
   BH1750 light_sensor;
+
+  queue<string> cache;
 
   bool server_connect()
   {
@@ -71,19 +75,30 @@ namespace device
   float get_light()
   {
     float level = light_sensor.readLightLevel();
-    if (level == -1 || level == -2)
+    Serial.printf("Light Level: %d", level); // TMP
+    if (level < 0)
     {
       throw IoTException("[-]Error when trying to read light-level");
     }
     return level;
   }
 
+  void send_cache_data()
+  {
+    while (!cache.empty())
+    {
+      send_data(cache.front());
+      cache.pop();
+    }
+  }
+
   string gather_data()
   {
     pair<float, float> temperature = get_temperature();
-    float light_level = get_light();
+    /*float light_level = get_light();
 
     printf("Light level: %d", light_level);
+    */
     stringstream data_stream;
     data_stream << "{\"temperature\" : " << temperature.first << ", \"sensor_id\" : \"temp_name\", \"humidity\" :" << temperature.second << "}";
     Serial.println(data_stream.str().c_str());
@@ -114,7 +129,14 @@ void setup()
   device::thermometer = SimpleDHT11(THERM_PIN);
 
   Wire.begin();
-  device::light_sensor.begin();
+  if (device::light_sensor.begin())
+  {
+    Serial.println("[*]BH1750 Advanced begin");
+  }
+  else
+  {
+    Serial.println("[-]Error initialising BH1750");
+  }
 }
 
 void loop()
@@ -137,9 +159,11 @@ void loop()
   if (!device::send_data(data))
   {
     Serial.println("[-]No connection to server");
+    device::cache.push(data);
     if (device::server_connect())
     {
       Serial.println("[*]Reconnected to server");
+      device::send_cache_data();
     }
   }
 }
