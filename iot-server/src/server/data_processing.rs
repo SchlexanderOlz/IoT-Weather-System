@@ -1,46 +1,36 @@
-use mongodb::{bson::doc, Client, Collection};
-use no_connection_error::NoConnectionError;
-use sensor_data::SensorData;
+use mongodb::{Collection};
 use std::error::Error;
 use std::mem::take;
+use db_connection::{DBConnection, sensor_data::SensorData, no_connection_error::NoConnectionError};
+use async_trait::async_trait;
 
-mod no_connection_error;
 pub mod sensor_data;
 
 const MIN_CACHE_SIZE: usize = 2000;
-const MONGO_DB_URL: &str = "mongodb://192.168.8.127:27017";
 
 pub struct DataProcessor {
-    collection: Option<Collection<SensorData>>,
-    cache: Vec<SensorData>,
+    connection: DBConnection,
+    cache: Vec<SensorData>
 }
 
 impl DataProcessor {
     pub async fn new() -> Result<DataProcessor, Box<dyn Error>> {
         Ok(DataProcessor {
-            collection: DataProcessor::connect().await,
+            connection: DBConnection::new().await?,
             cache: Vec::with_capacity(MIN_CACHE_SIZE),
         })
     }
+}
 
-    async fn connect() -> Option<Collection<SensorData>> {
-        let client = match Client::with_uri_str(MONGO_DB_URL).await {
-            Ok(client) => client,
-            Err(_) => return None,
-        };
 
-        let db = client.database("IoT-DB");
-        if db
-            .run_command(doc! {"create": "SensorData"}, None)
-            .await
-            .is_err()
-        {
-            println!("[*]Tables already exist")
-        }
-        Some(db.collection("SensorData"))
-    }
+#[async_trait]
+pub trait Inserter {
+    async fn insert(&mut self, data: Vec<SensorData>) -> Result<(), Box<dyn Error>>;
+}
 
-    pub async fn insert(&mut self, data: Vec<SensorData>) -> Result<(), Box<dyn Error>> {
+#[async_trait]
+impl Inserter for DataProcessor {
+    async fn insert(&mut self, data: Vec<SensorData>) -> Result<(), Box<dyn Error>> {
         async fn insert_mongodb(
             collection: &Collection<SensorData>,
             data: Vec<SensorData>,
@@ -52,9 +42,9 @@ impl DataProcessor {
                 .map_err(|err| Box::new(err) as Box<dyn Error>)
         }
 
-        if let Some(collection) = &self.collection {
-            if let Err(err) = insert_mongodb(&collection, data.clone()).await {
-                self.collection = None;
+        if let Some(collection) = &self.connection.get_collection() {
+            if let Err(err) = insert_mongodb(collection, data.clone()).await {
+                self.connection.reset();
 
                 let mut data_copy = data.clone();
                 self.cache.append(&mut data_copy);
@@ -67,7 +57,7 @@ impl DataProcessor {
             insert_mongodb(collection, cache).await?;
             Ok(())
         } else {
-            self.collection = DataProcessor::connect().await;
+            self.connection.reconnect().await;
             let mut data_copy = data.clone();
             self.cache.append(&mut data_copy);
             Err(Box::new(NoConnectionError))

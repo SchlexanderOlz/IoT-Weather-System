@@ -1,5 +1,6 @@
 use chrono::Utc;
 use data_processing::DataProcessor;
+use db_connection::sensor_data::SensorData;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
 use serde_json::{self, Value};
 use std::io::Read;
@@ -8,7 +9,7 @@ use std::str;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::server::data_processing::sensor_data::SensorData;
+use crate::server::data_processing::Inserter;
 
 mod data_processing;
 mod logging;
