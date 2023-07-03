@@ -51,7 +51,7 @@ namespace device
   {
     WiFi.begin(WIFI);
     delay(1000);
-    return WiFi.status() == WL_CONNECTED;
+    return WiFi.status() != WL_CONNECTED;
   }
 
   bool send_data(string data)
