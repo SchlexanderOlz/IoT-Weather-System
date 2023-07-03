@@ -7,12 +7,30 @@ import { w3cwebsocket as W3CWebSocket } from 'websocket';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-const weather_client = new W3CWebSocket("ws://localhost:8050")
 
-weather_client.onmessage = (message) => {
-  const data = JSON.parse(message.data);
-  console.log(data);
+const socket = new WebSocket('ws://192.168.8.181:3030/ws/');
+let pingInterval;
+
+socket.onopen = function(event) {
+    console.log('WebSocket connection opened');
+    pingInterval = setInterval(() => {
+        socket.send('ping');
+    }, 5000);
 };
+
+socket.onmessage = function(event) {
+    console.log('WebSocket message received:', event.data);
+};
+
+socket.onclose = function(event) {
+    console.log('WebSocket connection closed');
+};
+
+window.addEventListener('beforeunload', () => {
+    socket.send('close');
+    clearInterval(pingInterval);
+});
+
 
 root.render(
   <React.StrictMode>

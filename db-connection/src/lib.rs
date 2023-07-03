@@ -11,6 +11,12 @@ pub struct DBConnection {
     collection: Option<Collection<SensorData>>
 }
 
+impl Clone for DBConnection {
+    fn clone(&self) -> Self {
+        Self { collection: self.collection.clone() }
+    }
+}
+
 impl DBConnection {
     pub async fn new() -> Result<Self, Box<dyn Error>> {
         Ok(Self {
