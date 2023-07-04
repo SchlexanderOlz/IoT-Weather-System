@@ -8,7 +8,7 @@ import { w3cwebsocket as W3CWebSocket } from 'websocket';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 
-const socket = new WebSocket('ws://192.168.8.181:3030/ws/');
+const socket = new WebSocket('ws://localhost:3030/ws/');
 let pingInterval;
 
 socket.onopen = function(event) {

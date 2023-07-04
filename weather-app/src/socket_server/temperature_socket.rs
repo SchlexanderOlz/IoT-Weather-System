@@ -2,37 +2,31 @@ use actix::{Actor, Handler, Message as ActixMessage, StreamHandler, AsyncContext
 use actix_web_actors::ws::{self, Message};
 use db_connection::sensor_data::SensorData;
 use serde_json;
-use lazy_static::lazy_static;
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Mutex},
     thread,
-    time::{Duration, Instant}
+    time::{Duration}
 };
+use super::{SocketServer, get_instance_anyways};
 
-mod database;
 
-use self::database::{DataProcessor, Selecter};
-
+pub mod database;
 
 pub struct TemperatureSocket {
-    database: DataProcessor,
-    data_cache: Mutex<Arc<Option<SensorData>>>,
-    last_query: Instant,
+    server: Mutex<&'static SocketServer>
 }
 
 impl Actor for TemperatureSocket {
     type Context = ws::WebsocketContext<Self>;
 }
 
+
 impl Clone for TemperatureSocket {
     fn clone(&self) -> Self {
-        Self {
-            database: self.database.clone(),
-            data_cache: Mutex::new(Arc::new(self.data_cache.lock().unwrap().as_ref().clone())),
-            last_query: self.last_query.clone(),
-        }
+        Self { server: Mutex::new(self.server.lock().unwrap().clone()) }
     }
 }
+
 
 #[derive(ActixMessage)]
 #[rtype(result = "()")]
@@ -49,11 +43,11 @@ impl Handler<SensorDataMessage> for TemperatureSocket {
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket {
     fn started(&mut self, ctx: &mut Self::Context) {
         let addr = ctx.address();
-        let this = self.clone();
-
+        let self_clone = self.clone();
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(5));
-            let data = this.get_data();
+            let server = self_clone.server.lock().unwrap();
+            let data = server.get_data();
             addr.do_send(SensorDataMessage(data));
         });
     }
@@ -72,26 +66,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket
 
 impl TemperatureSocket {
     pub async fn new() -> Self {
-        Self {
-            data_cache: Mutex::new(Arc::new(None)),
-            last_query: Instant::now(),
-            database: DataProcessor::new().await,
-        }
-    }
-
-    fn get_data(&self) -> Option<SensorData> {
-        if Instant::now() - self.last_query > Duration::from_secs(5) {
-            let data = match self.database.get_newest_temperature() {
-                Ok(data) => Some(data),
-                Err(err) => {
-                    println!("[-]{}", err);
-                    return None;
-                }
-            };
-            *self.data_cache.lock().unwrap() = Arc::new(data.clone());
-            data
-        } else {
-            self.data_cache.lock().unwrap().as_ref().clone()
-        }
+        Self { server: Mutex::new(get_instance_anyways().await) }
     }
 }
