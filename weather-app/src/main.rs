@@ -1,7 +1,7 @@
 use actix_web::{HttpServer, App,  web, HttpRequest, HttpResponse};
 use actix_web_static_files::ResourceFiles;
 use actix_web_actors::ws;
-use socket_server::{temperature_socket::TemperatureSocket};
+use socket_server::temperature_socket::TemperatureSocket;
 
 
 mod socket_server;
@@ -34,4 +34,3 @@ async fn main() -> Result<(), std::io::Error> {
     .run()
     .await
 }
-

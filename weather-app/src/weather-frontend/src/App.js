@@ -4,7 +4,7 @@ const App = () => {
   const [sensorData, setSensorData] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3030/ws/');
+    const ws = new WebSocket('ws://192.168.8.181:3030/ws/');
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setSensorData(data);
