@@ -8,7 +8,7 @@ pub struct SensorData {
     timestamp: DateTime<Utc>,
     temperature: Option<f32>,
     humidity: Option<u8>,
-    light_level: Option<u32>,
+    light_level: Option<f32>,
     pressure: Option<u32>,
 }
 

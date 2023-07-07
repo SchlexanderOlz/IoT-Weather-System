@@ -45,10 +45,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket
         let addr = ctx.address();
         let self_clone = self.clone();
         thread::spawn(move || loop {
-            thread::sleep(Duration::from_secs(5));
             let server = self_clone.server.lock().unwrap();
             let data = server.get_data();
             addr.do_send(SensorDataMessage(data));
+            thread::sleep(Duration::from_secs(1));
         });
     }
 
