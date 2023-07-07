@@ -37,6 +37,7 @@ namespace device
   WiFiClientSecure connection;
   SimpleDHT11 thermometer;
   BH1750 light_sensor;
+  Adafruit_BMP085 pressure_sensor;
 
   queue<string> cache;
 
@@ -75,12 +76,17 @@ namespace device
   float get_light()
   {
     float level = light_sensor.readLightLevel();
-    Serial.printf("Light Level: %d", level); // TMP
+
     if (level < 0)
     {
       throw IoTException("[-]Error when trying to read light-level");
     }
     return level;
+  }
+
+  int32_t get_pressure()
+  {
+    return pressure_sensor.readPressure();
   }
 
   void send_cache_data()
@@ -95,12 +101,11 @@ namespace device
   string gather_data()
   {
     pair<float, float> temperature = get_temperature();
-    /*float light_level = get_light();
+    float light_level = get_light();
+    int32_t pressure = get_pressure();
 
-    printf("Light level: %d", light_level);
-    */
     stringstream data_stream;
-    data_stream << "{\"temperature\" : " << temperature.first << ", \"sensor_id\" : \"temp_name\", \"humidity\" :" << temperature.second << "}";
+    data_stream << "{\"temperature\" : " << temperature.first << ", \"sensor_id\" : \"temp_name\", \"humidity\" : " << temperature.second << ", \"light_level\" : " << light_level << ", \"pressure\" : " << pressure << "}";
     Serial.println(data_stream.str().c_str());
     return data_stream.str();
   }
@@ -136,6 +141,15 @@ void setup()
   else
   {
     Serial.println("[-]Error initialising BH1750");
+  }
+
+  if (!device::pressure_sensor.begin())
+  {
+    Serial.println("[-]Could not find a valid BMP185 sensor, check wiring!");
+  }
+  else
+  {
+    Serial.println("[*]Succesfully connected to BMP180");
   }
 }
 
