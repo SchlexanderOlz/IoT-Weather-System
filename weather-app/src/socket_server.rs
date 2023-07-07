@@ -18,7 +18,7 @@ pub async unsafe fn get_instance() -> Option<&'static SocketServer> {
 pub async fn get_instance_anyways() -> &'static SocketServer {
     match unsafe { get_instance().await } {
         Some(data) => data,
-        None => panic!("Your mum is fat!!!")
+        None => panic!("Not possible")
     }
 }
 
