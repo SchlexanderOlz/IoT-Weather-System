@@ -14,7 +14,7 @@
 #define WIFI "ScholzLAN", "#ScholzLAN!"
 #define IOT_HOST "192.168.8.181", 3000U
 #define THERM_PIN 2U
-#define INTERVAL 5000U
+#define INTERVAL 1000U
 
 using namespace std;
 
