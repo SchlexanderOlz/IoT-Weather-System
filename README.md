@@ -1,6 +1,6 @@
-# IoT-Cassandra
-An example usage for the Cassandra database
+# IoT Weather App
 
+An Iot-System which is used to display live data
 
 docker pull cassandra
 docker run --name IoT-Node0 -p 9042:9042 -d cassandra
