@@ -1,8 +1,10 @@
-use mongodb::{Collection};
+use async_trait::async_trait;
+use db_connection::{
+    no_connection_error::NoConnectionError, sensor_data::SensorData, DBConnection,
+};
+use mongodb::Collection;
 use std::error::Error;
 use std::mem::take;
-use db_connection::{DBConnection, sensor_data::SensorData, no_connection_error::NoConnectionError};
-use async_trait::async_trait;
 
 pub mod sensor_data;
 
@@ -10,7 +12,7 @@ const MIN_CACHE_SIZE: usize = 2000;
 
 pub struct DataProcessor {
     connection: DBConnection,
-    cache: Vec<SensorData>
+    cache: Vec<SensorData>,
 }
 
 impl DataProcessor {
@@ -21,7 +23,6 @@ impl DataProcessor {
         })
     }
 }
-
 
 #[async_trait]
 pub trait Inserter {

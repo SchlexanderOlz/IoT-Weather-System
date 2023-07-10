@@ -11,8 +11,8 @@
 #include <exception>
 #include <queue>
 
-#define WIFI "ScholzLAN", "#ScholzLAN!"
-#define IOT_HOST "192.168.8.181", 3000U
+#define WIFI "ScholzLAN", "ScholzLAN"
+#define IOT_HOST "192.168.8.181", 3010U
 #define THERM_PIN 2U
 #define INTERVAL 1000U
 
@@ -52,7 +52,7 @@ namespace device
   {
     WiFi.begin(WIFI);
     delay(1000);
-    return WiFi.status() != WL_CONNECTED;
+    return WiFi.status() == WL_CONNECTED;
   }
 
   bool send_data(string data)

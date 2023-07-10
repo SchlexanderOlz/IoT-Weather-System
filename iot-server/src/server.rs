@@ -7,12 +7,15 @@ use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::str;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 use crate::server::data_processing::Inserter;
 
 mod data_processing;
 mod logging;
+
+const TIMEOUT: u64 = 5000;
 
 pub struct Server {
     server: TcpListener,
@@ -24,7 +27,6 @@ impl Server {
     pub async fn new(address: &str) -> Self {
         let processor = DataProcessor::new().await.unwrap();
         let listener = TcpListener::bind(address).expect("Couldn't bind to port");
-        lis
         let mut ssl_acceptor = SslAcceptor::mozilla_modern(SslMethod::tls()).unwrap();
         ssl_acceptor
             .set_certificate_chain_file("keys/cert.pem")
@@ -45,6 +47,7 @@ impl Server {
 
         for stream in arc_self.server.incoming() {
             let client_stream = stream.unwrap();
+            client_stream.set_read_timeout(Some(Duration::from_millis(TIMEOUT))).unwrap();
             if let Ok(ssl_stream) = arc_self.ssl_acceptor.accept(client_stream) {
                 logging::display_new_connection(ssl_stream.get_ref());
 
@@ -57,6 +60,7 @@ impl Server {
     }
 
     async fn handle_client(&self, mut client_stream: SslStream<TcpStream>) {
+        // Helper function to decode bytes into a string
         async fn decode_bytes(data: &[u8]) -> Option<String> {
             if let Ok(data_str) = str::from_utf8(data) {
                 Some(data_str.to_string())
@@ -66,6 +70,7 @@ impl Server {
             }
         }
 
+        // Helper function to insert JSON data into the processor
         async fn insert_json(
             client_stream: &SslStream<TcpStream>,
             data_str: &str,
@@ -88,7 +93,6 @@ impl Server {
         }
 
         let address = client_stream.get_ref().peer_addr().unwrap().to_string();
-
         loop {
             let mut buff = [0u8; 1024];
             match client_stream.read(&mut buff) {
@@ -107,7 +111,6 @@ impl Server {
                 Err(err) => println!("{}", err.to_string()),
             }
         }
-
         logging::display_closed(&address);
     }
 }

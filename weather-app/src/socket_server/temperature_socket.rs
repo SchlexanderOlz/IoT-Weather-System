@@ -1,32 +1,27 @@
-use actix::{Actor, Handler, Message as ActixMessage, StreamHandler, AsyncContext};
+use super::SocketServer;
+use actix::{Actor, AsyncContext, Handler, Message as ActixMessage, StreamHandler};
 use actix_web_actors::ws::{self, Message};
 use db_connection::sensor_data::SensorData;
 use serde_json;
-use std::{
-    sync::{Mutex},
-    thread,
-    time::{Duration}
-};
-use super::{SocketServer, get_instance_anyways};
-
+use std::{sync::Mutex, thread, time::Duration};
 
 pub mod database;
 
 pub struct TemperatureSocket {
-    server: Mutex<&'static SocketServer>
+    server: Mutex<&'static SocketServer>,
 }
 
 impl Actor for TemperatureSocket {
     type Context = ws::WebsocketContext<Self>;
 }
 
-
 impl Clone for TemperatureSocket {
     fn clone(&self) -> Self {
-        Self { server: Mutex::new(self.server.lock().unwrap().clone()) }
+        Self {
+            server: Mutex::new(self.server.lock().unwrap().clone()),
+        }
     }
 }
-
 
 #[derive(ActixMessage)]
 #[rtype(result = "()")]
@@ -66,6 +61,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket
 
 impl TemperatureSocket {
     pub async fn new() -> Self {
-        Self { server: Mutex::new(get_instance_anyways().await) }
+        Self {
+            server: Mutex::new(SocketServer::get_instance().await),
+        }
     }
 }
