@@ -24,6 +24,7 @@ impl Server {
     pub async fn new(address: &str) -> Self {
         let processor = DataProcessor::new().await.unwrap();
         let listener = TcpListener::bind(address).expect("Couldn't bind to port");
+        lis
         let mut ssl_acceptor = SslAcceptor::mozilla_modern(SslMethod::tls()).unwrap();
         ssl_acceptor
             .set_certificate_chain_file("keys/cert.pem")
