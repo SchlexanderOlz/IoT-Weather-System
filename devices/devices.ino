@@ -106,7 +106,7 @@ namespace device
   {
     vector<uint8_t> bytes = {0x1, 0x1};
     bytes.resize(bytes.size() + sizeof(DEVICE_NAME));
-    memcpy(bytes.data(), &DEVICE_NAME, sizeof(DEVICE_NAME));
+    memcpy(bytes.data() + 2, &DEVICE_NAME, sizeof(DEVICE_NAME));
 
     pair<float, float> temperature = get_temperature();
     bytes.push_back(0x2);

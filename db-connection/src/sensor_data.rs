@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use crate::data::{Decoder, u32_iter_to_next, f32_iter_to_next, string_iter_to_next};
@@ -17,6 +19,27 @@ pub struct SensorData {
 impl Clone for SensorData {
     fn clone(&self) -> Self {
         Self { sensor_id: self.sensor_id.clone(), timestamp: self.timestamp.clone(), temperature: self.temperature, humidity: self.humidity, light_level: self.light_level, pressure: self.pressure }
+    }
+}
+
+impl Display for SensorData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SensorData {{\n")?;
+        write!(f, "  sensor_id: {},\n", self.sensor_id)?;
+        write!(f, "  timestamp: {},\n", self.timestamp)?;
+        if let Some(temperature) = self.temperature {
+            write!(f, "  temperature: {}°C,\n", temperature)?;
+        }
+        if let Some(humidity) = self.humidity {
+            write!(f, "  humidity: {}%,\n", humidity)?;
+        }
+        if let Some(light_level) = self.light_level {
+            write!(f, "  light_level: {},\n", light_level)?;
+        }
+        if let Some(pressure) = self.pressure {
+            write!(f, "  pressure: {} Pa,\n", pressure)?;
+        }
+        write!(f, "}}")
     }
 }
 
