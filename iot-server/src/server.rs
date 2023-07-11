@@ -67,8 +67,12 @@ impl Server {
                     if bytes_read == 0 {
                         break;
                     }
+                    match buff[0] {
+                        0x1 => println!("[+]Device is of type thermometer -> ignored because unimplemented"),
+                        _ => println!("[-]Invalid Device")
+                    }
 
-                    let sensor_data = SensorData::from_bytes(buff[..bytes_read].to_vec());
+                    let sensor_data = SensorData::from_bytes(buff[1..bytes_read].to_vec());
                     logging::display_new_data(client_stream.get_ref());
                     let mut processor = self.processor.lock().await;
                     if let Err(err) = processor.insert(vec![sensor_data]).await {
@@ -76,7 +80,7 @@ impl Server {
                     }
 
                 }
-                Err(err) => println!("{}", err.to_string()),
+                Err(err) => {println!("{}", err.to_string()); break},
             }
         }
         logging::display_closed(&address);

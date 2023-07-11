@@ -105,23 +105,25 @@ namespace device
   vector<uint8_t> gather_data()
   {
     vector<uint8_t> bytes = {0x1, 0x1};
-    auto data_ptr = bytes.data();
-    memcpy(data_ptr, &DEVICE_NAME, sizeof(DEVICE_NAME));
+    bytes.resize(bytes.size() + sizeof(DEVICE_NAME));
+    memcpy(bytes.data(), &DEVICE_NAME, sizeof(DEVICE_NAME));
 
     pair<float, float> temperature = get_temperature();
-
     bytes.push_back(0x2);
-    memcpy(data_ptr, &temperature.first, sizeof(float));
+    bytes.resize(bytes.size() + sizeof(float));
+    memcpy(bytes.data() + bytes.size() - sizeof(float), &temperature.first, sizeof(float));
     bytes.push_back(0x3);
     bytes.push_back(temperature.second);
 
     float light_level = get_light();
     bytes.push_back(0x4);
-    memcpy(data_ptr, &light_level, sizeof(float));
+    bytes.resize(bytes.size() + sizeof(float));
+    memcpy(bytes.data() + bytes.size() - sizeof(float), &light_level, sizeof(float));
 
     uint32_t pressure = (uint32_t)get_pressure();
     bytes.push_back(0x5);
-    memcpy(data_ptr, &pressure, sizeof(uint32_t));
+    bytes.resize(bytes.size() + sizeof(uint32_t));
+    memcpy(bytes.data() + bytes.size() - sizeof(uint32_t), &pressure, sizeof(uint32_t));
 
     return bytes;
   }
