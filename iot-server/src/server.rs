@@ -1,8 +1,7 @@
-use chrono::Utc;
 use data_processing::DataProcessor;
+use db_connection::data::Decoder;
 use db_connection::sensor_data::SensorData;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
-use serde_json::{self, Value};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::str;
@@ -60,38 +59,6 @@ impl Server {
     }
 
     async fn handle_client(&self, mut client_stream: SslStream<TcpStream>) {
-        // Helper function to decode bytes into a string
-        async fn decode_bytes(data: &[u8]) -> Option<String> {
-            if let Ok(data_str) = str::from_utf8(data) {
-                Some(data_str.to_string())
-            } else {
-                println!("[-] Invalid UTF-8 bytes received!");
-                None
-            }
-        }
-
-        // Helper function to insert JSON data into the processor
-        async fn insert_json(
-            client_stream: &SslStream<TcpStream>,
-            data_str: &str,
-            processor: &mut DataProcessor,
-        ) {
-            let mut data_json: Value = match serde_json::from_str(data_str) {
-                Ok(value) => value,
-                Err(_) => {
-                    println!("[-] Json could not be parsed");
-                    return;
-                }
-            };
-
-            data_json["timestamp"] = serde_json::to_value(Utc::now()).unwrap();
-
-            let sensor_data: SensorData = serde_json::from_value(data_json).unwrap();
-            if let Err(err) = processor.insert(vec![sensor_data]).await {
-                logging::display_receive_wrong_msg(client_stream.get_ref(), err);
-            }
-        }
-
         let address = client_stream.get_ref().peer_addr().unwrap().to_string();
         loop {
             let mut buff = [0u8; 1024];
@@ -101,12 +68,13 @@ impl Server {
                         break;
                     }
 
-                    if let Some(data_str) = decode_bytes(&buff[..bytes_read]).await {
-                        logging::display_new_data(client_stream.get_ref());
-
-                        let mut processor = self.processor.lock().await;
-                        insert_json(&client_stream, &data_str, &mut processor).await;
+                    let sensor_data = SensorData::from_bytes(buff[..bytes_read].to_vec());
+                    logging::display_new_data(client_stream.get_ref());
+                    let mut processor = self.processor.lock().await;
+                    if let Err(err) = processor.insert(vec![sensor_data]).await {
+                        logging::display_receive_wrong_msg(client_stream.get_ref(), err);
                     }
+
                 }
                 Err(err) => println!("{}", err.to_string()),
             }

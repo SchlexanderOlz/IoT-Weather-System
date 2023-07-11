@@ -3,6 +3,7 @@ use sensor_data::SensorData;
 use std::error::Error;
 
 pub mod sensor_data;
+pub mod data;
 pub mod no_connection_error;
 
 const MONGO_DB_URL: &str = "mongodb://192.168.8.127:27017";

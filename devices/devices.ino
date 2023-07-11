@@ -10,11 +10,14 @@
 #include <sstream>
 #include <exception>
 #include <queue>
+#include <cstdint>
+#include <cstring>
 
 #define WIFI "ScholzLAN", "ScholzLAN"
 #define IOT_HOST "192.168.8.181", 3010U
 #define THERM_PIN 2U
 #define INTERVAL 1000U
+#define DEVICE_NAME "thermomether_1\0"
 
 using namespace std;
 
@@ -39,7 +42,7 @@ namespace device
   BH1750 light_sensor;
   Adafruit_BMP085 pressure_sensor;
 
-  queue<string> cache;
+  queue<vector<uint8_t>> cache;
 
   bool server_connect()
   {
@@ -55,10 +58,11 @@ namespace device
     return WiFi.status() == WL_CONNECTED;
   }
 
-  bool send_data(string data)
-  {
-    return (bool)connection.print(data.c_str());
+  bool send_data(vector<uint8_t> data) {
+      string str(data.begin(), data.end());
+      return (bool)connection.print(str.c_str());
   }
+
 
   pair<float, float> get_temperature()
   {
@@ -98,16 +102,28 @@ namespace device
     }
   }
 
-  string gather_data()
+  vector<uint8_t> gather_data()
   {
-    pair<float, float> temperature = get_temperature();
-    float light_level = get_light();
-    int32_t pressure = get_pressure();
+    vector<uint8_t> bytes = {0x1, 0x1};
+    auto data_ptr = bytes.data();
+    memcpy(data_ptr, &DEVICE_NAME, sizeof(DEVICE_NAME));
 
-    stringstream data_stream;
-    data_stream << "{\"temperature\" : " << temperature.first << ", \"sensor_id\" : \"temp_name\", \"humidity\" : " << temperature.second << ", \"light_level\" : " << light_level << ", \"pressure\" : " << pressure << "}";
-    Serial.println(data_stream.str().c_str());
-    return data_stream.str();
+    pair<float, float> temperature = get_temperature();
+
+    bytes.push_back(0x2);
+    memcpy(data_ptr, &temperature.first, sizeof(float));
+    bytes.push_back(0x3);
+    bytes.push_back(temperature.second);
+
+    float light_level = get_light();
+    bytes.push_back(0x4);
+    memcpy(data_ptr, &light_level, sizeof(float));
+
+    uint32_t pressure = (uint32_t)get_pressure();
+    bytes.push_back(0x5);
+    memcpy(data_ptr, &pressure, sizeof(uint32_t));
+
+    return bytes;
   }
 }
 
@@ -158,7 +174,7 @@ void loop()
   delay(INTERVAL);
   Serial.println("[*]Gathering data");
 
-  string data;
+  vector<uint8_t> data;
   try
   {
     data = device::gather_data();
