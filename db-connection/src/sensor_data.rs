@@ -61,6 +61,7 @@ impl Decoder for SensorData {
                 0x5 => pressure = Some(u32_iter_to_next(&mut iter)),
                 _ => ()
             }
+            iter.next();
         }
 
         let sensor_id = sensor_id.expect("Value was not initialized -> sensor_id value");

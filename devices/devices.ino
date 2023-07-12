@@ -4,7 +4,6 @@
 #include <SimpleDHT.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
-#include <SPIFFS.h>
 #include <string>
 #include <utility>
 #include <sstream>
@@ -17,7 +16,7 @@
 #define IOT_HOST "192.168.8.181", 3010U
 #define THERM_PIN 2U
 #define INTERVAL 1000U
-#define DEVICE_NAME "thermomether_1\0"
+#define DEVICE_NAME "thermomether_1"
 
 using namespace std;
 
@@ -42,7 +41,7 @@ namespace device
   BH1750 light_sensor;
   Adafruit_BMP085 pressure_sensor;
 
-  queue<vector<uint8_t>> cache;
+  queue<vector<byte>> cache;
 
   bool server_connect()
   {
@@ -55,10 +54,13 @@ namespace device
   {
     WiFi.begin(WIFI);
     delay(1000);
-    return WiFi.status() == WL_CONNECTED;
+    return WiFi.status() != WL_CONNECTED;
   }
 
-  bool send_data(vector<uint8_t> data) {
+  bool send_data(vector<byte> data) {
+      for (auto byte : data) {
+        Serial.printf("%d\n", byte);
+      }
       string str(data.begin(), data.end());
       return (bool)connection.print(str.c_str());
   }
@@ -102,9 +104,9 @@ namespace device
     }
   }
 
-  vector<uint8_t> gather_data()
+  vector<byte> gather_data()
   {
-    vector<uint8_t> bytes = {0x1, 0x1};
+    vector<byte> bytes = {0x1, 0x1};
     bytes.resize(bytes.size() + sizeof(DEVICE_NAME));
     memcpy(bytes.data() + 2, &DEVICE_NAME, sizeof(DEVICE_NAME));
 
