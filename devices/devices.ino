@@ -58,11 +58,7 @@ namespace device
   }
 
   bool send_data(vector<byte> data) {
-      for (auto byte : data) {
-        Serial.printf("%d\n", byte);
-      }
-      string str(data.begin(), data.end());
-      return (bool)connection.print(str.c_str());
+      return (bool)connection.write(data.data(), data.size());
   }
 
 
