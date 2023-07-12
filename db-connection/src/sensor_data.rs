@@ -45,14 +45,13 @@ impl Display for SensorData {
 
 impl Decoder for SensorData {
     fn from_bytes(bytes: Vec<u8>) -> Self {
-
         let (mut sensor_id, mut temperature, mut humidity, mut light_level, mut pressure)
         = (None, None, None, None, None);
-
 
         let mut iter: std::slice::Iter<'_, u8> = bytes.iter();
 
         while let Some(byte) = iter.next() {
+            println!("{}", byte);
             match byte {
                 0x1 => sensor_id = Some(string_iter_to_next(&mut iter)),
                 0x2 => temperature = Some(f32_iter_to_next(&mut iter)),

@@ -13,7 +13,6 @@ fn _string_to_next(bytes: &[u8]) -> String {
 
 pub fn string_iter_to_next(iter: &mut std::slice::Iter<'_, u8>) -> String {
     let str = String::from_utf8(iter.take_while(|x| **x != 0x0).map(|x| *x).collect()).unwrap();
-    iter.next();
     str
 }
 
