@@ -3,7 +3,7 @@ use byteorder::{ByteOrder, LittleEndian};
 pub struct DataFactory;
 
 pub trait Decoder {
-    fn from_bytes(bytes: Vec<u8>) -> Self;
+    fn from_bytes(bytes: &[u8]) -> Self;
 }
 
 

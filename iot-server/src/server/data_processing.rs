@@ -31,10 +31,10 @@ pub trait Inserter {
 
 #[async_trait]
 impl Inserter for DataProcessor {
-    async fn insert(&mut self, data: Vec<SensorData>) -> Result<(), Box<dyn Error>> {
+    async fn insert(&mut self, mut data: Vec<SensorData>) -> Result<(), Box<dyn Error>> {
         async fn insert_mongodb(
             collection: &Collection<SensorData>,
-            data: Vec<SensorData>,
+            data: &Vec<SensorData>,
         ) -> Result<(), Box<dyn Error>> {
             collection
                 .insert_many(data, None)
@@ -43,24 +43,21 @@ impl Inserter for DataProcessor {
                 .map_err(|err| Box::new(err) as Box<dyn Error>)
         }
 
-        if let Some(collection) = &self.connection.get_collection() {
-            if let Err(err) = insert_mongodb(collection, data.clone()).await {
+        if let Some(collection) = self.connection.get_collection() {
+            if let Err(err) = insert_mongodb(collection, &data).await {
                 self.connection.reset();
-
-                let mut data_copy = data.clone();
-                self.cache.append(&mut data_copy);
+                self.cache.append(&mut data);
                 return Err(err);
             }
             if self.cache.is_empty() {
                 return Ok(());
             }
             let cache = take(&mut self.cache);
-            insert_mongodb(collection, cache).await?;
+            insert_mongodb(collection, &cache).await?;
             Ok(())
         } else {
             self.connection.reconnect().await;
-            let mut data_copy = data.clone();
-            self.cache.append(&mut data_copy);
+            self.cache.append(&mut data);
             Err(Box::new(NoConnectionError))
         }
     }

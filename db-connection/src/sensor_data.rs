@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
+use crate::data::{f32_iter_to_next, string_iter_to_next, u32_iter_to_next, Decoder};
 use chrono::{DateTime, Utc};
-use crate::data::{Decoder, u32_iter_to_next, f32_iter_to_next, string_iter_to_next};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct SensorData {
@@ -15,10 +14,16 @@ pub struct SensorData {
     pressure: Option<u32>,
 }
 
-
 impl Clone for SensorData {
     fn clone(&self) -> Self {
-        Self { sensor_id: self.sensor_id.clone(), timestamp: self.timestamp.clone(), temperature: self.temperature, humidity: self.humidity, light_level: self.light_level, pressure: self.pressure }
+        Self {
+            sensor_id: self.sensor_id.clone(),
+            timestamp: self.timestamp.clone(),
+            temperature: self.temperature,
+            humidity: self.humidity,
+            light_level: self.light_level,
+            pressure: self.pressure,
+        }
     }
 }
 
@@ -44,9 +49,9 @@ impl Display for SensorData {
 }
 
 impl Decoder for SensorData {
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        let (mut sensor_id, mut temperature, mut humidity, mut light_level, mut pressure)
-        = (None, None, None, None, None);
+    fn from_bytes(bytes: &[u8]) -> Self {
+        let (mut sensor_id, mut temperature, mut humidity, mut light_level, mut pressure) =
+            (None, None, None, None, None);
 
         let mut iter: std::slice::Iter<'_, u8> = bytes.iter();
 
@@ -58,12 +63,18 @@ impl Decoder for SensorData {
                 0x3 => humidity = Some(*iter.next().expect("Iterator was empty")),
                 0x4 => light_level = Some(f32_iter_to_next(&mut iter)),
                 0x5 => pressure = Some(u32_iter_to_next(&mut iter)),
-                _ => ()
+                _ => (),
             }
         }
 
         let sensor_id = sensor_id.expect("Value was not initialized -> sensor_id value");
-        Self { sensor_id, timestamp: Utc::now(), temperature, humidity, light_level, pressure }
+        Self {
+            sensor_id,
+            timestamp: Utc::now(),
+            temperature,
+            humidity,
+            light_level,
+            pressure,
+        }
     }
 }
-

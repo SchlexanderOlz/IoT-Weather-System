@@ -1,9 +1,6 @@
 use self::temperature_socket::database::Selecter;
 use db_connection::sensor_data::SensorData;
-use std::{
-    sync::Mutex,
-    time::{Duration, Instant},
-};
+use std::{sync::Mutex, thread, time::Duration};
 use temperature_socket::database::DataProcessor;
 
 pub mod temperature_socket;
@@ -13,7 +10,6 @@ static mut SOCKET_SERVER: Option<SocketServer> = None;
 pub struct SocketServer {
     database: DataProcessor,
     data_cache: Mutex<Option<SensorData>>,
-    last_query: Mutex<Instant>,
 }
 
 impl SocketServer {
@@ -21,35 +17,26 @@ impl SocketServer {
         Self {
             data_cache: Mutex::new(None),
             database: DataProcessor::new().await,
-            last_query: Mutex::new(Instant::now()),
         }
     }
 
     pub async fn get_instance() -> &'static SocketServer {
         let socket_server = async {
             unsafe {
-                if let None = SOCKET_SERVER {
-                    SOCKET_SERVER = Some(SocketServer::new().await);
+                if SOCKET_SERVER.is_none() {
+                    SOCKET_SERVER = Some(SocketServer::new().await)
                 }
-                SOCKET_SERVER.as_ref()
+                let server = SOCKET_SERVER.as_ref().expect("");
+                server.start();
+                server
             }
         };
-
-        match socket_server.await {
-            Some(data) => data,
-            None => panic!("Not possible"),
-        }
+        let socket = socket_server.await;
+        socket
     }
 
     fn get_data(&self) -> Option<SensorData> {
-        let mut data = self.data_cache.lock().unwrap();
-        let mut last_query = self.last_query.lock().unwrap();
-        if Instant::now() > *last_query + Duration::from_secs(1) {
-            let new_data = self.get_database_data();
-            *data = new_data;
-            *last_query = Instant::now();
-        }
-        data.clone()
+        self.data_cache.lock().unwrap().clone()
     }
 
     fn get_database_data(&self) -> Option<SensorData> {
@@ -60,5 +47,13 @@ impl SocketServer {
                 None
             }
         }
+    }
+
+    pub fn start(&'static self) {
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(1));
+            let new_data = self.get_database_data();
+            *self.data_cache.lock().unwrap() = new_data;
+        });
     }
 }

@@ -14,18 +14,19 @@ use crate::server::data_processing::Inserter;
 mod data_processing;
 mod logging;
 
-const TIMEOUT: u64 = 5000;
+const TIMEOUT: u64 = 10000;
 
 pub struct Server {
     server: TcpListener,
     ssl_acceptor: SslAcceptor,
-    processor: Arc<Mutex<DataProcessor>>,
+    processor: Mutex<DataProcessor>,
 }
 
 impl Server {
     pub async fn new(address: &str) -> Self {
         let processor = DataProcessor::new().await.unwrap();
-        let listener = TcpListener::bind(address).expect("Couldn't bind to port");
+        let listener =
+            TcpListener::bind(address).expect("Couldn't bind to port. Address unavailable");
         let mut ssl_acceptor = SslAcceptor::mozilla_modern(SslMethod::tls()).unwrap();
         ssl_acceptor
             .set_certificate_chain_file("keys/cert.pem")
@@ -37,20 +38,22 @@ impl Server {
         Self {
             server: listener,
             ssl_acceptor: ssl_acceptor.build(),
-            processor: Arc::new(Mutex::new(processor)),
+            processor: Mutex::new(processor),
         }
     }
 
     pub async fn listen(self) {
-        let arc_self = Arc::new(self);
+        let self_ptr = Arc::new(self);
 
-        for stream in arc_self.server.incoming() {
+        for stream in self_ptr.server.incoming() {
             let client_stream = stream.unwrap();
-            client_stream.set_read_timeout(Some(Duration::from_millis(TIMEOUT))).unwrap();
-            if let Ok(ssl_stream) = arc_self.ssl_acceptor.accept(client_stream) {
+            client_stream
+                .set_read_timeout(Some(Duration::from_millis(TIMEOUT)))
+                .unwrap();
+            if let Ok(ssl_stream) = self_ptr.ssl_acceptor.accept(client_stream) {
                 logging::display_new_connection(ssl_stream.get_ref());
 
-                let self_copy = Arc::clone(&arc_self);
+                let self_copy = Arc::clone(&self_ptr);
                 tokio::task::spawn(async move {
                     self_copy.handle_client(ssl_stream).await;
                 });
@@ -68,19 +71,23 @@ impl Server {
                         break;
                     }
                     match buff[0] {
-                        0x1 => println!("[+]Device is of type thermometer -> ignored because unimplemented"),
-                        _ => println!("[-]Invalid Device")
+                        0x1 => println!(
+                            "[+]Device is of type thermometer -> ignored because unimplemented"
+                        ),
+                        _ => println!("[-]Invalid Device"),
                     }
-                    let sensor_data = SensorData::from_bytes(buff[1..bytes_read].to_vec());
+                    let sensor_data = SensorData::from_bytes(&buff[1..bytes_read]);
 
                     logging::display_new_data(client_stream.get_ref());
                     let mut processor = self.processor.lock().await;
                     if let Err(err) = processor.insert(vec![sensor_data]).await {
                         logging::display_receive_wrong_msg(client_stream.get_ref(), err);
                     }
-
                 }
-                Err(err) => {println!("{}", err.to_string()); break},
+                Err(err) => {
+                    println!("{}", err.to_string());
+                    break;
+                }
             }
         }
         logging::display_closed(&address);
