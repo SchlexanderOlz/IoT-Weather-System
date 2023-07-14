@@ -6,7 +6,7 @@ mod server;
 async fn main() {
     let mut port: Option<String> = None;
     let mut args = std::env::args();
-
+    args.next();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--address" => port = args.next(),

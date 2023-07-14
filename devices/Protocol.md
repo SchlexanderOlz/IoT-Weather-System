@@ -15,10 +15,10 @@ The first byte send is interpreted as the device-type
 | 0x1 | Weather-Device |
 
 
-| Bytes | Meaning |
-| --- | --- |
-| 0x1 | ID/name |
-| 0x2 | temperature |
-| 0x3 | humidity |
-| 0x4 | light-level |
-| 0x5 | pressure |
+| Bytes | Meaning | Size |
+| --- | --- | --- |
+| 0x1 | ID/name | dynamic -> must terminate with 0x0 |
+| 0x2 | temperature | 32bit -> float
+| 0x3 | humidity | 8bit -> byte |
+| 0x4 | light-level | 32bit -> float |
+| 0x5 | pressure | 32bit -> unsigned integer |

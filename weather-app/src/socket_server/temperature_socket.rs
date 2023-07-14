@@ -5,8 +5,6 @@ use db_connection::sensor_data::SensorData;
 use serde_json;
 use std::{sync::Mutex, thread, time::Duration};
 
-pub mod database;
-
 pub struct TemperatureSocket {
     server: Mutex<&'static SocketServer>,
 }
