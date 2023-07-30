@@ -1,11 +1,14 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use db_connection::{
     no_connection_error::NoConnectionError, sensor_data::SensorData, DBConnection,
 };
 use device::Device;
+use mongodb::bson::Bson;
+use mongodb::Cursor;
 use mongodb::{
     bson::{doc, from_document},
-    options::{AggregateOptions, FindOneOptions},
+    options::{AggregateOptions, FindOneOptions, FindOptions},
 };
 use no_data_error::NoDataError;
 use std::{error::Error, sync::Arc};
@@ -51,6 +54,11 @@ impl DataProcessor {
 pub trait Selecter {
     async fn get_newest_temperature(&self) -> Result<SensorData, Box<dyn Error>>;
     async fn get_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error>>;
+    async fn get_data_for_timespan(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<SensorData>, Box<dyn Error>>;
 }
 
 #[async_trait]
@@ -106,5 +114,36 @@ impl Selecter for DataProcessor {
         } else {
             Err("No collection found".into())
         }
+    }
+
+    async fn get_data_for_timespan(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<SensorData>, Box<dyn Error>> {
+        let filter = doc! {
+            "timestamp" : {
+                "$gte": Bson::Int64(start.timestamp()),
+                "$lte": Bson::Int64(end.timestamp())
+        }
+        };
+
+        let options = FindOptions::builder().sort(filter).build();
+
+        let collection = match self.connection.get_collection() {
+            Some(collection) => collection,
+            None => return Err(Box::new(NoConnectionError)),
+        };
+
+        let mut result = vec![];
+        if let Ok(mut cursor) = collection.find(None, options).await {
+            while let Ok(advance) = cursor.advance().await {
+                if !advance {
+                    break;
+                }
+                result.push(cursor.deserialize_current()?);
+            }
+        };
+        Ok(result)
     }
 }

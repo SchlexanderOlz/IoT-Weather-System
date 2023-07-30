@@ -24,7 +24,7 @@ impl SocketServer {
     }
 
     pub async fn get_instance() -> &'static SocketServer {
-        let socket_server = async {
+                    let socket_server = async {
             unsafe {
                 if SOCKET_SERVER.is_none() {
                     SOCKET_SERVER = Some(SocketServer::new().await);

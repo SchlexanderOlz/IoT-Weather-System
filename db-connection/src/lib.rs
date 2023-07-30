@@ -6,7 +6,7 @@ pub mod data;
 pub mod no_connection_error;
 pub mod sensor_data;
 
-const MONGO_DB_URL: &str = "mongodb://192.168.8.127:27017";
+const MONGO_DB_URL: &str = "mongodb://127.0.0.1:27017";
 
 pub struct DBConnection {
     collection: Option<Collection<SensorData>>,

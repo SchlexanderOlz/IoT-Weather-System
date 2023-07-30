@@ -18,7 +18,7 @@ const TemperatureBox = () => {
   const [sensorData, setSensorData] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://172.21.214.122:3030/ws/");
+    const ws = new WebSocket("ws://10.10.0.127:3030/ws/");
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setSensorData(data);

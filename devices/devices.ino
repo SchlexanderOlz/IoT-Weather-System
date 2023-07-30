@@ -13,10 +13,10 @@
 #include <cstring>
 
 #define WIFI "ScholzLAN", "ScholzLAN"
-#define IOT_HOST "192.168.8.181", 3010U
+#define IOT_HOST "10.10.0.127", 3010U
 #define THERM_PIN 2U
 #define INTERVAL 1000U
-#define DEVICE_NAME "thermomether_1"
+#define DEVICE_NAME "thermomether_inside"
 
 using namespace std;
 

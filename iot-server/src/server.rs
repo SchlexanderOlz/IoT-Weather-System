@@ -4,7 +4,6 @@ use db_connection::sensor_data::SensorData;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
-use std::str;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
