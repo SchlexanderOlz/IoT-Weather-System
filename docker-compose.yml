@@ -1,0 +1,49 @@
+version: '3'
+
+volumes:
+  mongodata:
+
+services:
+  weather-frontend:
+    container_name: weather-frontend
+    build:
+      context: ./weather-frontend
+    volumes:
+      - ./weather-frontend:/app/next-app
+    restart: always
+    ports:
+      - 3000:3000
+  
+  weather-api:
+    container_name: weather-api
+    build:
+      context: ./weather-api
+    image: cloudolife/col-rust-docker
+    command: cargo run
+    ports:
+    - "7000:7000"
+    restart: on-failure
+    volumes:
+      - "./weather-api:/usr/weather-api"
+
+  iot-server:
+    build:
+      context: ./iot-server
+    image: cloudolife/col-rust-docker
+    command: cargo run
+    ports:
+    - "7000:7000"
+    restart: on-failure
+    volumes:
+      - "./iot-server:/usr/iot-server"
+
+  mongo:
+    ports:
+      - '27017:27017'
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    image: mongo
+    volumes:
+      - mongodata:/data/db

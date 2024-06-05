@@ -1,13 +1,11 @@
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
-use actix_web_static_files::ResourceFiles;
 use database::{DataProcessor, Selecter};
 use socket_server::temperature_socket::TemperatureSocket;
 
 mod database;
 mod socket_server;
 
-include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -30,11 +28,9 @@ async fn main() -> Result<(), std::io::Error> {
     }
 
     HttpServer::new(|| {
-        let generated = generate();
         App::new()
             .route("/ws/", web::get().to(temperature_socket_route))
             .route("/getDevices", web::get().to(get_devices))
-            .service(ResourceFiles::new("/", generated))
     })
     .bind((
         address

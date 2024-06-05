@@ -1,5 +1,5 @@
 [package]
-name = "weather-app"
+name = "weather-api"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,7 +11,6 @@ tokio = { version = "1.0", features = ["full"] }
 actix-web = "4.3.1"
 actix = "0.13.0"
 actix-web-actors = "4.2.0"
-actix-web-static-files = "4.0"
 static-files = "0.2.1"
 db-connection = { path="../db-connection" }
 async-trait = "0.1"
@@ -23,5 +22,3 @@ mongodb = "2.6.0"
 chrono = { version = "0.4.25", features = ["serde"] }
 
 
-[build-dependencies]
-static-files = "0.2.1"

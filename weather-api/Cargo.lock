@@ -226,18 +226,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-web-static-files"
-version = "4.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adf6d1ef6d7a60e084f9e0595e2a5234abda14e76c105ecf8e2d0e8800c41a1f"
-dependencies = [
- "actix-web",
- "derive_more",
- "futures-util",
- "static-files",
-]
-
-[[package]]
 name = "actix_derive"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2158,13 +2146,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca6ad05a4870b2bf5fe995117d3728437bd27d7cd5f06f13c17443ef369775a1"
 
 [[package]]
-name = "weather-app"
+name = "weather-api"
 version = "0.1.0"
 dependencies = [
  "actix",
  "actix-web",
  "actix-web-actors",
- "actix-web-static-files",
  "async-trait",
  "chrono",
  "crossbeam",
