@@ -64,30 +64,33 @@ impl Server {
         let address = client_stream.get_ref().peer_addr().unwrap().to_string();
         loop {
             let mut buff = [0u8; 1024];
-            match client_stream.read(&mut buff) {
-                Ok(bytes_read) => {
-                    if bytes_read == 0 {
-                        break;
-                    }
-                    match buff[0] {
-                        0x1 => println!(
-                            "[+]Device is of type thermometer -> ignored because unimplemented"
-                        ),
-                        _ => println!("[-]Invalid Device"),
-                    }
-                    let sensor_data = SensorData::from_bytes(&buff[1..bytes_read]);
-
-                    logging::display_new_data(client_stream.get_ref());
-                    let mut processor = self.processor.lock().await;
-                    if let Err(err) = processor.insert(vec![sensor_data]).await {
-                        logging::display_receive_wrong_msg(client_stream.get_ref(), err);
-                    }
-                }
-                Err(err) => {
-                    println!("{}", err.to_string());
-                    break;
-                }
+            let bytes_read = client_stream.read(&mut buff);
+            if let Err(err) = bytes_read {
+                println!("{:?}", err);
+                break;
             }
+            let bytes_read = bytes_read.unwrap();
+
+            if bytes_read == 0 {
+                break;
+            }
+            match buff[0] {
+                0x1 => println!(
+                    "[+]Device is of type thermometer -> ignored because unimplemented"
+                ),
+                _ => println!("[-]Invalid Device"),
+            }
+
+            // TODO: Switch to possible serde implementation
+            let sensor_data = SensorData::from_bytes(&buff[1..bytes_read]);
+
+            // TODO: There is probably some actually usable logging lib
+            logging::display_new_data(client_stream.get_ref());
+            let mut processor = self.processor.lock().await;
+            if let Err(err) = processor.insert(vec![sensor_data]).await {
+                logging::display_receive_wrong_msg(client_stream.get_ref(), err);
+            }
+
         }
         logging::display_closed(&address);
     }

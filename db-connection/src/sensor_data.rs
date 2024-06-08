@@ -1,10 +1,8 @@
-use std::fmt::Display;
-
 use crate::data::{f32_iter_to_next, string_iter_to_next, u32_iter_to_next, Decoder};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SensorData {
     sensor_id: String,
     timestamp: DateTime<Utc>,
@@ -14,40 +12,8 @@ pub struct SensorData {
     pressure: Option<u32>,
 }
 
-impl Clone for SensorData {
-    fn clone(&self) -> Self {
-        Self {
-            sensor_id: self.sensor_id.clone(),
-            timestamp: self.timestamp.clone(),
-            temperature: self.temperature,
-            humidity: self.humidity,
-            light_level: self.light_level,
-            pressure: self.pressure,
-        }
-    }
-}
 
-impl Display for SensorData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SensorData {{\n")?;
-        write!(f, "  sensor_id: {},\n", self.sensor_id)?;
-        write!(f, "  timestamp: {},\n", self.timestamp)?;
-        if let Some(temperature) = self.temperature {
-            write!(f, "  temperature: {}°C,\n", temperature)?;
-        }
-        if let Some(humidity) = self.humidity {
-            write!(f, "  humidity: {}%,\n", humidity)?;
-        }
-        if let Some(light_level) = self.light_level {
-            write!(f, "  light_level: {},\n", light_level)?;
-        }
-        if let Some(pressure) = self.pressure {
-            write!(f, "  pressure: {} Pa,\n", pressure)?;
-        }
-        write!(f, "}}")
-    }
-}
-
+// TODO: Maybe write this as a serde-trait
 impl Decoder for SensorData {
     fn from_bytes(bytes: &[u8]) -> Self {
         let (mut sensor_id, mut temperature, mut humidity, mut light_level, mut pressure) =
@@ -56,7 +22,6 @@ impl Decoder for SensorData {
         let mut iter: std::slice::Iter<'_, u8> = bytes.iter();
 
         while let Some(byte) = iter.next() {
-            println!("{}", byte);
             match byte {
                 0x1 => sensor_id = Some(string_iter_to_next(&mut iter)),
                 0x2 => temperature = Some(f32_iter_to_next(&mut iter)),

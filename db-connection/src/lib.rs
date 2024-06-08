@@ -7,6 +7,7 @@ pub mod no_connection_error;
 pub mod sensor_data;
 
 const MONGO_DB_URL: &str = "mongodb://127.0.0.1:27017";
+const DATABASE_NAME: &str = "IoT-DB";
 
 pub struct DBConnection {
     collection: Option<Collection<SensorData>>,
@@ -21,22 +22,31 @@ impl Clone for DBConnection {
 }
 
 impl DBConnection {
+
+    #[inline]
     pub async fn new() -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             collection: Self::connect().await,
         })
     }
 
+    #[inline]
     pub fn reset(&mut self) {
         self.collection = None
     }
 
+    #[inline]
     pub fn get_collection(&self) -> Option<&Collection<SensorData>> {
-        return self.collection.as_ref();
+        self.collection.as_ref()
     }
+
+
+    #[inline]
     pub fn get_collection_mut(&mut self) -> Option<&mut Collection<SensorData>> {
-        return self.collection.as_mut();
+        self.collection.as_mut()
     }
+
+    #[inline]
     pub async fn reconnect(&mut self) {
         self.collection = Self::connect().await
     }
@@ -47,7 +57,7 @@ impl DBConnection {
             Err(_) => return None,
         };
 
-        let db = client.database("IoT-DB");
+        let db = client.database(DATABASE_NAME);
         if db
             .run_command(doc! {"create": "SensorData"}, None)
             .await

@@ -52,9 +52,9 @@ impl DataProcessor {
 
 #[async_trait]
 pub trait Selecter {
-    async fn get_newest_temperature(&self) -> Result<SensorData, Box<dyn Error>>;
-    async fn get_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error>>;
-    async fn get_data_for_timespan(
+    async fn fetch_latest_sensor_data(&self) -> Result<SensorData, Box<dyn Error>>;
+    async fn fetch_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error>>;
+    async fn fetch_devices_with_range(
         &self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
@@ -63,7 +63,7 @@ pub trait Selecter {
 
 #[async_trait]
 impl Selecter for DataProcessor {
-    async fn get_newest_temperature(&self) -> Result<SensorData, Box<dyn Error>> {
+    async fn fetch_latest_sensor_data(&self) -> Result<SensorData, Box<dyn Error>> {
         let options = FindOneOptions::builder()
             .sort(doc! { "timestamp": -1 })
             .build();
@@ -75,14 +75,10 @@ impl Selecter for DataProcessor {
 
         let result = collection.find_one(None, options).await?;
 
-        if let Some(result) = result {
-            Ok(result)
-        } else {
-            Err(Box::new(NoDataError))
-        }
+        result.ok_or(Box::new(NoDataError))
     }
 
-    async fn get_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error>> {
+    async fn fetch_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error>> {
         let pipeline = vec![
             doc! {
                 "$group": {
@@ -100,23 +96,25 @@ impl Selecter for DataProcessor {
         ];
 
         let options = AggregateOptions::builder().build();
-        if let Some(collection) = self.connection.get_collection() {
-            let mut cursor = collection.aggregate(pipeline, options).await?;
-            let mut results: Vec<Device> = Vec::new();
-
-            while let Ok(advance) = cursor.advance().await {
-                if !advance {
-                    break;
-                }
-                results.push(from_document(cursor.deserialize_current()?)?);
-            }
-            Ok(results)
-        } else {
-            Err("No collection found".into())
+        let connection = self.connection.get_collection();
+        if connection.is_none() {
+            println!("Connection not possible");
         }
+        let connection = connection.unwrap();
+
+        let mut cursor = connection.aggregate(pipeline, options).await?;
+        let mut results: Vec<Device> = Vec::new();
+
+        while let Ok(advance) = cursor.advance().await {
+            if !advance {
+                break;
+            }
+            results.push(from_document(cursor.deserialize_current()?)?);
+        }
+        Ok(results)
     }
 
-    async fn get_data_for_timespan(
+    async fn fetch_devices_with_range(
         &self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,

@@ -53,7 +53,7 @@ async fn temperature_socket_route(
 
 async fn get_devices() -> impl Responder {
     let processor = DataProcessor::get_instance().await;
-    match processor.get_all_devices().await {
+    match processor.fetch_all_devices().await {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => {
             println!("{:?}", err);
