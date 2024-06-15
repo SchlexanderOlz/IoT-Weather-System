@@ -13,33 +13,43 @@ services:
     restart: always
     ports:
       - 3000:3000
+    environment:
+      - NEXT_PUBLIC_SERVER_URL=http://localhost:7000
+      - NEXT_PUBLIC_WEATHER_SOCKET_URL=ws://localhost:7000/weather/
   
   weather-api:
     container_name: weather-api
     build:
       context: ./weather-api
     image: cloudolife/col-rust-docker
-    command: cargo run
+    command: cargo run -- --address 0.0.0.0 --port 8000
     ports:
-    - "7000:7000"
+    - "8000:8000"
     restart: on-failure
     volumes:
       - "./weather-api:/usr/weather-api"
+    environment:
+      - MONGO_URL=mongodb://admin:admin@mongo:27017
 
   iot-server:
     build:
       context: ./iot-server
     image: cloudolife/col-rust-docker
-    command: cargo run
+    command: cargo run -- --address 0.0.0.0:7000
     ports:
     - "7000:7000"
     restart: on-failure
     volumes:
       - "./iot-server:/usr/iot-server"
+    environment:
+      - MONGO_URL=mongodb://admin:admin@mongo:27017
+
 
   mongo:
     ports:
       - '27017:27017'
+    expose:
+      - '27017'
     restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin

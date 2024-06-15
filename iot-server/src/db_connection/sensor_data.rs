@@ -1,4 +1,4 @@
-use crate::data::{f32_iter_to_next, string_iter_to_next, u32_iter_to_next, Decoder};
+use super::data::{f32_iter_to_next, string_iter_to_next, u32_iter_to_next, Decoder};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

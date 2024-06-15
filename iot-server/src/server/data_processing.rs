@@ -1,4 +1,4 @@
-use db_connection::{
+use crate::db_connection::{
     no_connection_error::NoConnectionError, sensor_data::SensorData, DBConnection,
 };
 use mongodb::Collection;

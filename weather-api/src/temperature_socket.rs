@@ -2,7 +2,7 @@ use crate::database::DataProcessor;
 
 use actix::{Actor, AsyncContext, Handler, Message as ActixMessage, StreamHandler};
 use actix_web_actors::ws::{self, Message};
-use db_connection::sensor_data::SensorData;
+use crate::database::connection::sensor_data::SensorData;
 use serde_json;
 use std::{sync::Arc, thread, time::Duration};
 

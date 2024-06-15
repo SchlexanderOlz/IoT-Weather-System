@@ -1,6 +1,6 @@
 FROM rust:latest
 
-WORKDIR /usr/receiver
+WORKDIR /usr/weather-api
 COPY . .
 
 RUN cargo install --path .

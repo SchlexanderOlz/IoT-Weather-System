@@ -1,7 +1,7 @@
 use actix::dev::Stream;
 use chrono::{DateTime, Utc};
 use crossbeam::atomic::AtomicConsume;
-use db_connection::{sensor_data::SensorData, DBConnection};
+use crate::database::connection::{sensor_data::SensorData, DBConnection};
 use device::Device;
 use mongodb::bson::Bson;
 use mongodb::{
@@ -18,6 +18,7 @@ use crate::WeatherQuery;
 
 mod device;
 mod no_data_error;
+pub mod connection;
 
 static mut DATA_PROCESSOR: Option<Arc<DataProcessor>> = None;
 

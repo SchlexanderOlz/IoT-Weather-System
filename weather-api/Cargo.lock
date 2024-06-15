@@ -434,9 +434,9 @@ checksum = "a3e2c3daef883ecc1b5d58c15adae93470a91d425f3532ba1695849656af3fc1"
 
 [[package]]
 name = "byteorder"
-version = "1.4.3"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
+checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
@@ -652,17 +652,6 @@ name = "data-encoding"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
-
-[[package]]
-name = "db-connection"
-version = "0.1.0"
-dependencies = [
- "byteorder",
- "chrono",
- "mongodb",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "derivative"
@@ -2138,9 +2127,9 @@ dependencies = [
  "actix-web-actors",
  "async-trait",
  "bson",
+ "byteorder",
  "chrono",
  "crossbeam",
- "db-connection",
  "lazy_static",
  "mongodb",
  "once_cell",

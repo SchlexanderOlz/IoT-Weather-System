@@ -1,13 +1,12 @@
 use mongodb::{bson::doc, Client, Collection};
 use no_connection_error::NoConnectionError;
 use sensor_data::SensorData;
-use std::error::Error;
+use std::{env, error::Error};
 
 pub mod data;
 pub mod no_connection_error;
 pub mod sensor_data;
 
-const MONGO_DB_URL: &str = "mongodb://127.0.0.1:27017";
 const DATABASE_NAME: &str = "IoT-DB";
 
 pub struct DBConnection {
@@ -23,7 +22,6 @@ impl Clone for DBConnection {
 }
 
 impl DBConnection {
-
     #[inline]
     pub async fn new() -> Result<Self, Box<dyn Error>> {
         Ok(Self {
@@ -53,7 +51,8 @@ impl DBConnection {
     }
 
     pub async fn connect() -> Option<Collection<SensorData>> {
-        let client = match Client::with_uri_str(MONGO_DB_URL).await {
+        let url = env::var("MONGO_URL").expect("MONGO_URL not set");
+        let client = match Client::with_uri_str(url).await {
             Ok(client) => client,
             Err(_) => return None,
         };

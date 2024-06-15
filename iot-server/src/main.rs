@@ -1,6 +1,7 @@
 use server::Server;
 
 mod server;
+mod db_connection;
 
 #[tokio::main]
 async fn main() {
