@@ -1,8 +1,7 @@
 use actix::dev::Stream;
 use chrono::{DateTime, Utc};
-use db_connection::{
-    sensor_data::SensorData, DBConnection,
-};
+use crossbeam::atomic::AtomicConsume;
+use db_connection::{sensor_data::SensorData, DBConnection};
 use device::Device;
 use mongodb::bson::Bson;
 use mongodb::{
@@ -10,6 +9,9 @@ use mongodb::{
     options::{AggregateOptions, FindOneOptions, FindOptions},
 };
 use no_data_error::NoDataError;
+use std::collections::BTreeMap;
+use std::sync::atomic::AtomicBool;
+use std::thread;
 use std::{error::Error, sync::Arc};
 
 use crate::WeatherQuery;
@@ -21,12 +23,16 @@ static mut DATA_PROCESSOR: Option<Arc<DataProcessor>> = None;
 
 pub struct DataProcessor {
     connection: DBConnection,
+    latest_weather_cache: BTreeMap<String, SensorData>,
+    continue_caching: AtomicBool,
 }
 
 impl Clone for DataProcessor {
     fn clone(&self) -> Self {
         Self {
             connection: self.connection.clone(),
+            latest_weather_cache: self.latest_weather_cache.clone(),
+            continue_caching: AtomicBool::new(self.continue_caching.load_consume()),
         }
     }
 }
@@ -35,7 +41,33 @@ impl DataProcessor {
     async fn new() -> Self {
         Self {
             connection: DBConnection::new().await.unwrap(),
+            latest_weather_cache: BTreeMap::new(),
+            continue_caching: AtomicBool::new(false), 
         }
+    }
+
+    #[inline]
+    pub async fn start_auto_caching(&mut self) {
+        *self.continue_caching.get_mut() = true;
+        while self.continue_caching.load_consume() {
+            self.update_cache().await.unwrap();
+            thread::sleep(std::time::Duration::from_secs(60));
+        }
+    }
+
+
+    #[inline]
+    pub async fn stop_auto_caching(&mut self) {
+        *self.continue_caching.get_mut() = false;
+    }
+
+    async fn update_cache(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let devices = self.fetch_all_devices().await?;
+        for device in devices {
+            let data = self.fetch_latest_sensor_data(device.name.as_str()).await?;
+            self.latest_weather_cache.insert(device.name, data);
+        }
+        Ok(())
     }
 
     pub async fn get_instance() -> Arc<Self> {
@@ -50,16 +82,15 @@ impl DataProcessor {
         Arc::clone(socket_server.await)
     }
 
-    pub async fn fetch_latest_sensor_data(&self) -> Result<SensorData, Box<dyn Error + Send + Sync>> {
+    pub async fn fetch_latest_sensor_data(
+        &self,
+        sensor_id: &str,
+    ) -> Result<SensorData, Box<dyn Error + Send + Sync>> {
         let options = FindOneOptions::builder()
-            .sort(doc! { "timestamp": -1 })
+            .sort(doc! { "timestamp": -1, "sensor_id": sensor_id })
             .build();
 
-        let collection = self.connection.collection();
-        if collection.is_err() {
-            return Err(collection.err().unwrap());
-        }
-        let collection = collection.unwrap();
+        let collection = self.connection.collection()?;
 
         let result = collection.find_one(None, options).await?;
 

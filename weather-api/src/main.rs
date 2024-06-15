@@ -1,18 +1,27 @@
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use std::sync::Arc;
+
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder, get};
 use actix_web_actors::ws;
 use database::DataProcessor;
 use mongodb::bson::DateTime;
 use serde::Deserialize;
-use socket_server::temperature_socket::TemperatureSocket;
+use temperature_socket::TemperatureSocket;
 
 mod database;
-mod socket_server;
+mod temperature_socket;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
     let mut address: Option<String> = None;
     let mut port: Option<u16> = None;
     let mut args = std::env::args();
+
+
+    tokio::spawn(async {
+        let mut instance = DataProcessor::get_instance().await; 
+        Arc::get_mut(&mut instance).unwrap().start_auto_caching().await;
+    });
+
     args.next();
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -30,7 +39,6 @@ async fn main() -> Result<(), std::io::Error> {
 
     HttpServer::new(|| {
         App::new()
-            .route("/weather/", web::get().to(temperature_socket_route))
             .route("/devices/", web::get().to(get_devices))
     })
     .bind((
@@ -44,11 +52,13 @@ async fn main() -> Result<(), std::io::Error> {
     .await
 }
 
-async fn temperature_socket_route(
+#[get("/weather/{device_name}/")]
+async fn weather_socket(
     req: HttpRequest,
     stream: web::Payload,
+    device_name: web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let socket = TemperatureSocket::new().await;
+    let socket = TemperatureSocket::new(device_name.into_inner(), DataProcessor::get_instance().await).await;
     ws::start(socket, &req, stream)
 }
 

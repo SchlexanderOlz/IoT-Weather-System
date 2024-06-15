@@ -3,6 +3,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Device {
-    name: String,
-    timestamp: DateTime<Utc>,
+    pub name: String,
+    pub timestamp: DateTime<Utc>,
 }

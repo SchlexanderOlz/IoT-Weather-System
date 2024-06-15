@@ -1,12 +1,14 @@
-use super::SocketServer;
+use crate::database::DataProcessor;
+
 use actix::{Actor, AsyncContext, Handler, Message as ActixMessage, StreamHandler};
 use actix_web_actors::ws::{self, Message};
 use db_connection::sensor_data::SensorData;
 use serde_json;
-use std::{sync::Mutex, thread, time::Duration};
+use std::{sync::Arc, thread, time::Duration};
 
 pub struct TemperatureSocket {
-    server: Mutex<&'static SocketServer>,
+    database: Arc<DataProcessor>,
+    device_name: String,
 }
 
 impl Actor for TemperatureSocket {
@@ -16,7 +18,8 @@ impl Actor for TemperatureSocket {
 impl Clone for TemperatureSocket {
     fn clone(&self) -> Self {
         Self {
-            server: Mutex::new(self.server.lock().unwrap().clone()),
+            database: Arc::clone(&self.database),
+            device_name: self.device_name.clone(),
         }
     }
 }
@@ -36,12 +39,16 @@ impl Handler<SensorDataMessage> for TemperatureSocket {
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket {
     fn started(&mut self, ctx: &mut Self::Context) {
         let addr = ctx.address();
-        let self_clone = self.clone();
-        thread::spawn(move || loop {
-            let server = self_clone.server.lock().unwrap();
-            let data = server.get_data();
-            addr.do_send(SensorDataMessage(data));
-            thread::sleep(Duration::from_secs(1));
+
+        let db = Arc::clone(&self.database);
+        let device_name = self.device_name.clone();
+
+        actix::spawn(async move {
+            loop {
+                let data = db.fetch_latest_sensor_data(device_name.as_str()).await.ok();
+                addr.do_send(SensorDataMessage(data));
+                thread::sleep(Duration::from_secs(1));
+            }
         });
     }
 
@@ -58,9 +65,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket
 }
 
 impl TemperatureSocket {
-    pub async fn new() -> Self {
+    pub async fn new(device_name: String, database: Arc<DataProcessor>) -> Self {
         Self {
-            server: Mutex::new(SocketServer::get_instance().await),
+            database,
+            device_name,
         }
     }
 }
