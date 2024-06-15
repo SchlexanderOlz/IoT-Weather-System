@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use db_connection::{
     no_connection_error::NoConnectionError, sensor_data::SensorData, DBConnection,
 };
@@ -22,28 +21,20 @@ impl DataProcessor {
             cache: Vec::with_capacity(MIN_CACHE_SIZE),
         })
     }
-}
 
-#[async_trait]
-pub trait Inserter {
-    async fn insert(&mut self, data: Vec<SensorData>) -> Result<(), Box<dyn Error>>;
-}
 
-#[async_trait]
-impl Inserter for DataProcessor {
-    async fn insert(&mut self, mut data: Vec<SensorData>) -> Result<(), Box<dyn Error>> {
+    pub async fn insert(&mut self, mut data: Vec<SensorData>) -> Result<(), Box<dyn Error + Send>> {
         async fn insert_mongodb(
             collection: &Collection<SensorData>,
             data: &Vec<SensorData>,
-        ) -> Result<(), Box<dyn Error>> {
+        ) -> Result<(), Box<dyn Error + Send>> {
             collection
                 .insert_many(data, None)
-                .await
-                .map(|_| ())
-                .map_err(|err| Box::new(err) as Box<dyn Error>)
+                .await.map(|_| ())
+                .map_err(|err| Box::new(err) as Box<dyn Error + Send>)
         }
 
-        if let Some(collection) = self.connection.get_collection() {
+        if let Ok(collection) = self.connection.collection() {
             if let Err(err) = insert_mongodb(collection, &data).await {
                 self.connection.reset();
                 self.cache.append(&mut data);

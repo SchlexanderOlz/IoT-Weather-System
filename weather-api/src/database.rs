@@ -1,17 +1,18 @@
-use async_trait::async_trait;
+use actix::dev::Stream;
 use chrono::{DateTime, Utc};
 use db_connection::{
-    no_connection_error::NoConnectionError, sensor_data::SensorData, DBConnection,
+    sensor_data::SensorData, DBConnection,
 };
 use device::Device;
 use mongodb::bson::Bson;
-use mongodb::Cursor;
 use mongodb::{
     bson::{doc, from_document},
     options::{AggregateOptions, FindOneOptions, FindOptions},
 };
 use no_data_error::NoDataError;
 use std::{error::Error, sync::Arc};
+
+use crate::WeatherQuery;
 
 mod device;
 mod no_data_error;
@@ -48,37 +49,54 @@ impl DataProcessor {
         };
         Arc::clone(socket_server.await)
     }
-}
 
-#[async_trait]
-pub trait Selecter {
-    async fn fetch_latest_sensor_data(&self) -> Result<SensorData, Box<dyn Error>>;
-    async fn fetch_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error>>;
-    async fn fetch_devices_with_range(
-        &self,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
-    ) -> Result<Vec<SensorData>, Box<dyn Error>>;
-}
-
-#[async_trait]
-impl Selecter for DataProcessor {
-    async fn fetch_latest_sensor_data(&self) -> Result<SensorData, Box<dyn Error>> {
+    pub async fn fetch_latest_sensor_data(&self) -> Result<SensorData, Box<dyn Error + Send + Sync>> {
         let options = FindOneOptions::builder()
             .sort(doc! { "timestamp": -1 })
             .build();
 
-        let collection = match self.connection.get_collection() {
-            Some(collection) => collection,
-            None => return Err(Box::new(NoConnectionError)),
-        };
+        let collection = self.connection.collection();
+        if collection.is_err() {
+            return Err(collection.err().unwrap());
+        }
+        let collection = collection.unwrap();
 
         let result = collection.find_one(None, options).await?;
 
         result.ok_or(Box::new(NoDataError))
     }
 
-    async fn fetch_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error>> {
+    pub async fn fetch_weather(
+        &self,
+        query: WeatherQuery,
+    ) -> Result<Vec<SensorData>, Box<dyn Error>> {
+        let statement = doc! {
+            "timestamp": {
+                "$lt": query.end.unwrap_or(bson::DateTime::from_millis(i64::MAX)),
+                "$gt": query.start
+            }
+        };
+        let collection = self.connection.collection().unwrap();
+        let mut cursor;
+
+        let mut options = None;
+
+        if let Some(limit) = query.limit {
+            let find_options = FindOptions::builder().limit(limit).build();
+            options = Some(find_options);
+        }
+
+        cursor = collection.find(statement, options).await?;
+
+        let mut res = Vec::with_capacity(cursor.size_hint().0);
+
+        while cursor.advance().await.unwrap() {
+            res.push(cursor.deserialize_current().unwrap());
+        }
+        Ok(res)
+    }
+
+    pub async fn fetch_all_devices(&self) -> Result<Vec<Device>, Box<dyn Error + Send + Sync>> {
         let pipeline = vec![
             doc! {
                 "$group": {
@@ -96,11 +114,7 @@ impl Selecter for DataProcessor {
         ];
 
         let options = AggregateOptions::builder().build();
-        let connection = self.connection.get_collection();
-        if connection.is_none() {
-            println!("Connection not possible");
-        }
-        let connection = connection.unwrap();
+        let connection = self.connection.collection()?;
 
         let mut cursor = connection.aggregate(pipeline, options).await?;
         let mut results: Vec<Device> = Vec::new();
@@ -118,7 +132,7 @@ impl Selecter for DataProcessor {
         &self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> Result<Vec<SensorData>, Box<dyn Error>> {
+    ) -> Result<Vec<SensorData>, Box<dyn Error + Send + Sync>> {
         let filter = doc! {
             "timestamp" : {
                 "$gte": Bson::Int64(start.timestamp()),
@@ -128,10 +142,7 @@ impl Selecter for DataProcessor {
 
         let options = FindOptions::builder().sort(filter).build();
 
-        let collection = match self.connection.get_collection() {
-            Some(collection) => collection,
-            None => return Err(Box::new(NoConnectionError)),
-        };
+        let collection = self.connection.collection()?;
 
         let mut result = vec![];
         if let Ok(mut cursor) = collection.find(None, options).await {

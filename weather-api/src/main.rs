@@ -1,11 +1,12 @@
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
-use database::{DataProcessor, Selecter};
+use database::DataProcessor;
+use mongodb::bson::DateTime;
+use serde::Deserialize;
 use socket_server::temperature_socket::TemperatureSocket;
 
 mod database;
 mod socket_server;
-
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -29,8 +30,8 @@ async fn main() -> Result<(), std::io::Error> {
 
     HttpServer::new(|| {
         App::new()
-            .route("/ws/", web::get().to(temperature_socket_route))
-            .route("/getDevices", web::get().to(get_devices))
+            .route("/weather/", web::get().to(temperature_socket_route))
+            .route("/devices/", web::get().to(get_devices))
     })
     .bind((
         address
@@ -59,5 +60,24 @@ async fn get_devices() -> impl Responder {
             println!("{:?}", err);
             HttpResponse::InternalServerError().finish()
         }
+    }
+}
+
+#[derive(Deserialize)]
+struct WeatherQuery {
+    pub limit: Option<i64>,
+    pub start: Option<DateTime>,
+    pub end: Option<DateTime>,
+}
+
+#[actix_web::get("/weather/")]
+async fn get_weather_data(query: web::Query<WeatherQuery>) -> impl Responder {
+    let query = query.into_inner();
+
+    let data = DataProcessor::get_instance().await.fetch_weather(query).await;
+
+    match data {
+        Ok(data) => HttpResponse::Ok().json(data),
+        Err(_) => HttpResponse::InternalServerError().finish()
     }
 }

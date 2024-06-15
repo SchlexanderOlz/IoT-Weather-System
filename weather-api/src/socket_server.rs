@@ -1,8 +1,7 @@
-use crate::database::{DataProcessor, Selecter};
+use crate::database::DataProcessor;
 use db_connection::sensor_data::SensorData;
 use std::{
     sync::{Arc, Mutex},
-    thread,
     time::Duration,
 };
 
@@ -24,7 +23,7 @@ impl SocketServer {
     }
 
     pub async fn get_instance() -> &'static SocketServer {
-                    let socket_server = async {
+        let socket_server = async {
             unsafe {
                 if SOCKET_SERVER.is_none() {
                     SOCKET_SERVER = Some(SocketServer::new().await);
@@ -43,9 +42,11 @@ impl SocketServer {
     pub fn start(&'static self) {
         tokio::task::spawn(async {
             loop {
-                thread::sleep(Duration::from_secs(1));
-                let new_data = self.database.fetch_latest_sensor_data().await.ok();
-                *self.cache.lock().unwrap() = new_data;
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                match self.database.fetch_latest_sensor_data().await {
+                    Ok(new_data) => *self.cache.lock().unwrap() = Some(new_data),
+                    Err(e) => eprintln!("Failed to fetch sensor data: {:?}", e), // More explicit error handling
+                }
             }
         });
     }

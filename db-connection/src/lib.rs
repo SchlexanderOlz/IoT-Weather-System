@@ -1,4 +1,5 @@
 use mongodb::{bson::doc, Client, Collection};
+use no_connection_error::NoConnectionError;
 use sensor_data::SensorData;
 use std::error::Error;
 
@@ -36,13 +37,13 @@ impl DBConnection {
     }
 
     #[inline]
-    pub fn get_collection(&self) -> Option<&Collection<SensorData>> {
-        self.collection.as_ref()
+    pub fn collection(&self) -> Result<&Collection<SensorData>, Box<dyn Error + Send + Sync>> {
+        self.collection.as_ref().ok_or(Box::new(NoConnectionError))
     }
 
 
     #[inline]
-    pub fn get_collection_mut(&mut self) -> Option<&mut Collection<SensorData>> {
+    pub fn collection_mut(&mut self) -> Option<&mut Collection<SensorData>> {
         self.collection.as_mut()
     }
 

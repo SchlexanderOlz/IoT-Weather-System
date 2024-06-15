@@ -1,5 +1,6 @@
 use std::{error::Error, fmt::Display};
 
+
 #[derive(Debug)]
 pub struct NoDataError;
 
@@ -10,3 +11,5 @@ impl Display for NoDataError {
 }
 
 impl Error for NoDataError {}
+unsafe impl Send for NoDataError {}
+unsafe impl Sync for NoDataError {}
