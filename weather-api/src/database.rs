@@ -1,7 +1,7 @@
+use crate::database::connection::{sensor_data::SensorData, DBConnection};
 use actix::dev::Stream;
 use chrono::{DateTime, Utc};
 use crossbeam::atomic::AtomicConsume;
-use crate::database::connection::{sensor_data::SensorData, DBConnection};
 use device::Device;
 use mongodb::bson::Bson;
 use mongodb::{
@@ -11,15 +11,16 @@ use mongodb::{
 use no_data_error::NoDataError;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicBool;
-use tokio::sync::Mutex;
 use std::thread;
+use std::time::SystemTime;
 use std::{error::Error, sync::Arc};
+use tokio::sync::Mutex;
 
 use crate::WeatherQuery;
 
+pub mod connection;
 mod device;
 mod no_data_error;
-pub mod connection;
 
 static mut DATA_PROCESSOR: Option<Arc<Mutex<DataProcessor>>> = None;
 
@@ -44,8 +45,6 @@ impl DataProcessor {
             latest_weather_cache: BTreeMap::new(),
         }
     }
-
-
 
     pub async fn update_cache(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
         let devices = self.fetch_all_devices().await?;
@@ -79,7 +78,9 @@ impl DataProcessor {
 
         let collection = self.connection.collection()?;
 
-        let result = collection.find_one(doc! { "sensor_id": sensor_id }, options).await?;
+        let result = collection
+            .find_one(doc! { "sensor_id": sensor_id }, options)
+            .await?;
 
         result.ok_or(Box::new(NoDataError))
     }
@@ -88,10 +89,17 @@ impl DataProcessor {
         &self,
         query: WeatherQuery,
     ) -> Result<Vec<SensorData>, Box<dyn Error>> {
-        let statement = doc! {
-            "timestamp": {
-                "$lt": query.end.unwrap_or(bson::DateTime::from_millis(i64::MAX)),
-                "$gt": query.start
+        let statement = if query.start.is_none() && query.end.is_none() {
+            doc! {
+                "sensor_id": &query.device.unwrap_or(String::from(""))
+            }
+        } else {
+            doc! {
+                "timestamp": {
+                    "$lt": query.end.unwrap_or(bson::DateTime::from(SystemTime::now()).to_string()),
+                    "$gt": query.start.unwrap_or(String::from(""))
+                },
+                "sensor_id": &query.device.unwrap_or(String::from(""))
             }
         };
         let collection = self.connection.collection().unwrap();

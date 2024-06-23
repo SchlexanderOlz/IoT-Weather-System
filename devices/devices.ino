@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <cstring>
 
-#define WIFI "ScholzLAN-5GHz", "ScholzLAN"
+#define WIFI "ScholzLAN", "ScholzLAN"
 #define IOT_HOST "10.10.0.26", 7000U 
 #define THERM_PIN 2U
 #define INTERVAL 1000U

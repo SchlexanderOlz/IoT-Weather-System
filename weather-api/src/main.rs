@@ -1,8 +1,7 @@
 use actix_cors::Cors;
-use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use database::DataProcessor;
-use mongodb::bson::DateTime;
 use serde::Deserialize;
 use temperature_socket::TemperatureSocket;
 
@@ -47,8 +46,9 @@ async fn get_devices() -> impl Responder {
 #[derive(Deserialize)]
 pub struct WeatherQuery {
     pub limit: Option<i64>,
-    pub start: Option<DateTime>,
-    pub end: Option<DateTime>,
+    pub start: Option<String>,
+    pub end: Option<String>,
+    pub device: Option<String>
 }
 
 async fn get_weather_data(query: web::Query<WeatherQuery>) -> impl Responder {

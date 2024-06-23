@@ -1,12 +1,16 @@
-"use client"
+"use client";
 import LiveData from "@/components/LiveData";
 import DevicePicker from "@/components/PickDecive";
 import { useEffect, useState } from "react";
 import { Device } from "@/types";
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
+import WeatherChart from "@/components/WeatherChart";
 
 export default function Home() {
   const [devices, setDevices] = useState<Device[]>([]);
-  const [selectedDevice, setSelectedDevice] = useState<Device>({name: "MockDevice"} as Device );
+  const [selectedDevice, setSelectedDevice] = useState<Device>({
+    name: "MockDevice",
+  } as Device);
 
   const fetchDevices = async () => {
     const response = await fetch(
@@ -25,6 +29,7 @@ export default function Home() {
       <div className="flex flex-col items-center min-h-screen mt-5">
         {selectedDevice ? <LiveData device_name={selectedDevice.name} /> : null}
         <DevicePicker devices={devices} setDevice={setSelectedDevice} />
+        <WeatherChart />
       </div>
     </main>
   );
