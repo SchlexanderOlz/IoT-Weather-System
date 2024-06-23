@@ -51,6 +51,7 @@ impl DBConnection {
 
     pub async fn connect() -> Option<Collection<SensorData>> {
         let url = env::var("MONGO_URL").expect("MONGO_URL not set");
+        println!("Connecting to MongoDB at {}", url);
         let client = match Client::with_uri_str(url).await {
             Ok(client) => client,
             Err(_) => return None,

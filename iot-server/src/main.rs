@@ -1,24 +1,12 @@
 use server::Server;
 
-mod server;
 mod db_connection;
+mod server;
 
 #[tokio::main]
 async fn main() {
-    let mut port: Option<String> = None;
-    let mut args = std::env::args();
-    args.next();
-    while let Some(arg) = args.next() {
-        match arg.as_str() {
-            "--address" => port = args.next(),
-            _ => panic!("Unknown argument {}", arg),
-        }
-    }
+    let url: String = std::env::var("HOST_URL").expect("HOST_URL not set");
 
-    let server = Server::new(
-        port.expect("Missing argument 'address'! Supply it with --address")
-            .as_str(),
-    )
-    .await;
+    let server = Server::new(&url).await;
     server.listen().await;
 }

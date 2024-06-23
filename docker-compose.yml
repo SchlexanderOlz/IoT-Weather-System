@@ -5,6 +5,8 @@ volumes:
 
 services:
   weather-frontend:
+    depends_on:
+      - weather-api
     container_name: weather-frontend
     build:
       context: ./weather-frontend
@@ -14,42 +16,52 @@ services:
     ports:
       - 3000:3000
     environment:
-      - NEXT_PUBLIC_SERVER_URL=http://localhost:7000
-      - NEXT_PUBLIC_WEATHER_SOCKET_URL=ws://localhost:7000/weather/
+      - NEXT_PUBLIC_SERVER_URL=http://127.0.0.1:8000
+      - NEXT_PUBLIC_WEATHER_SOCKET_URL=ws://127.0.0.1:8000/weather/
   
   weather-api:
+    depends_on:
+      - iot-server
     container_name: weather-api
     build:
       context: ./weather-api
+      dockerfile: Dockerfile.weather-api
     image: cloudolife/col-rust-docker
-    command: cargo run -- --address 0.0.0.0 --port 8000
+    command: cargo run
     ports:
     - "8000:8000"
     restart: on-failure
     volumes:
       - "./weather-api:/usr/weather-api"
     environment:
-      - MONGO_URL=mongodb://admin:admin@mongo:27017
+      - RUST_BACKTRACE=1
+      - MONGO_URL=mongodb://admin:admin@127.0.0.1:27017
+      - HOST_PORT=8000
+      - HOST_ADDRESS=0.0.0.0
 
   iot-server:
+    depends_on:
+      - mongo
+    container_name: iot-server
     build:
       context: ./iot-server
+      dockerfile: Dockerfile.iot-server
     image: cloudolife/col-rust-docker
-    command: cargo run -- --address 0.0.0.0:7000
+    command: cargo run
     ports:
     - "7000:7000"
     restart: on-failure
     volumes:
       - "./iot-server:/usr/iot-server"
     environment:
-      - MONGO_URL=mongodb://admin:admin@mongo:27017
+      - HOST_URL=0.0.0.0:7000
+      - MONGO_URL=mongodb://admin:admin@127.0.0.1:27017
 
 
   mongo:
+    container_name: mongo
     ports:
       - '27017:27017'
-    expose:
-      - '27017'
     restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin

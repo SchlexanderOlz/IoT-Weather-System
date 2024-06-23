@@ -11,6 +11,7 @@ use mongodb::{
 use no_data_error::NoDataError;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicBool;
+use tokio::sync::Mutex;
 use std::thread;
 use std::{error::Error, sync::Arc};
 
@@ -20,12 +21,11 @@ mod device;
 mod no_data_error;
 pub mod connection;
 
-static mut DATA_PROCESSOR: Option<Arc<DataProcessor>> = None;
+static mut DATA_PROCESSOR: Option<Arc<Mutex<DataProcessor>>> = None;
 
 pub struct DataProcessor {
     connection: DBConnection,
     latest_weather_cache: BTreeMap<String, SensorData>,
-    continue_caching: AtomicBool,
 }
 
 impl Clone for DataProcessor {
@@ -33,7 +33,6 @@ impl Clone for DataProcessor {
         Self {
             connection: self.connection.clone(),
             latest_weather_cache: self.latest_weather_cache.clone(),
-            continue_caching: AtomicBool::new(self.continue_caching.load_consume()),
         }
     }
 }
@@ -43,27 +42,14 @@ impl DataProcessor {
         Self {
             connection: DBConnection::new().await.unwrap(),
             latest_weather_cache: BTreeMap::new(),
-            continue_caching: AtomicBool::new(false), 
-        }
-    }
-
-    #[inline]
-    pub async fn start_auto_caching(&mut self) {
-        *self.continue_caching.get_mut() = true;
-        while self.continue_caching.load_consume() {
-            self.update_cache().await.unwrap();
-            thread::sleep(std::time::Duration::from_secs(60));
         }
     }
 
 
-    #[inline]
-    pub async fn stop_auto_caching(&mut self) {
-        *self.continue_caching.get_mut() = false;
-    }
 
-    async fn update_cache(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn update_cache(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
         let devices = self.fetch_all_devices().await?;
+        println!("Devices: {:?}", devices);
         for device in devices {
             let data = self.fetch_latest_sensor_data(device.name.as_str()).await?;
             self.latest_weather_cache.insert(device.name, data);
@@ -71,13 +57,13 @@ impl DataProcessor {
         Ok(())
     }
 
-    pub async fn get_instance() -> Arc<Self> {
+    pub async fn get_instance() -> Arc<Mutex<Self>> {
         let socket_server = async {
             unsafe {
                 if DATA_PROCESSOR.is_none() {
-                    DATA_PROCESSOR = Some(Arc::new(DataProcessor::new().await))
+                    DATA_PROCESSOR = Some(Arc::new(Mutex::new(DataProcessor::new().await)))
                 }
-                DATA_PROCESSOR.as_ref().expect("")
+                DATA_PROCESSOR.as_ref().unwrap()
             }
         };
         Arc::clone(socket_server.await)
@@ -88,12 +74,12 @@ impl DataProcessor {
         sensor_id: &str,
     ) -> Result<SensorData, Box<dyn Error + Send + Sync>> {
         let options = FindOneOptions::builder()
-            .sort(doc! { "timestamp": -1, "sensor_id": sensor_id })
+            .sort(doc! { "timestamp": -1 })
             .build();
 
         let collection = self.connection.collection()?;
 
-        let result = collection.find_one(None, options).await?;
+        let result = collection.find_one(doc! { "sensor_id": sensor_id }, options).await?;
 
         result.ok_or(Box::new(NoDataError))
     }

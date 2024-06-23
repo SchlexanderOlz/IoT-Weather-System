@@ -2,12 +2,13 @@ use crate::database::DataProcessor;
 
 use actix::{Actor, AsyncContext, Handler, Message as ActixMessage, StreamHandler};
 use actix_web_actors::ws::{self, Message};
+use tokio::sync::Mutex;
 use crate::database::connection::sensor_data::SensorData;
 use serde_json;
 use std::{sync::Arc, thread, time::Duration};
 
 pub struct TemperatureSocket {
-    database: Arc<DataProcessor>,
+    database: Arc<Mutex<DataProcessor>>,
     device_name: String,
 }
 
@@ -45,7 +46,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket
 
         actix::spawn(async move {
             loop {
-                let data = db.fetch_latest_sensor_data(device_name.as_str()).await.ok();
+                let data = db.lock().await.fetch_latest_sensor_data(device_name.as_str()).await.ok();
+                println!("Latest Data: {:?}", data);
                 addr.do_send(SensorDataMessage(data));
                 thread::sleep(Duration::from_secs(1));
             }
@@ -65,7 +67,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for TemperatureSocket
 }
 
 impl TemperatureSocket {
-    pub async fn new(device_name: String, database: Arc<DataProcessor>) -> Self {
+    pub async fn new(device_name: String, database: Arc<Mutex<DataProcessor>>) -> Self {
         Self {
             database,
             device_name,

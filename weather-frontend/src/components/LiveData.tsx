@@ -1,7 +1,8 @@
+"use client";
 import { SensorData } from "@/types";
 import React, { useEffect, useState } from "react";
 
-const LiveData = (device_name: string) => {
+const LiveData = ({ device_name }: { device_name: string }) => {
   const [data, setData] = useState<SensorData[]>([]);
 
   useEffect(() => {
@@ -24,22 +25,30 @@ const LiveData = (device_name: string) => {
   }, [device_name]);
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      {data.map((sensorData, index) => (
-        <div
-          key={index}
-          className="bg-gray-100 rounded-lg p-4 m-2 shadow-md w-full max-w-md"
-        >
-          <p className="text-lg font-semibold">Sensor Data</p>
-          <div className="grid grid-cols-2 gap-4">
-            <p className="text-sm font-medium">Temperature:</p>
-            <p className="text-sm">{sensorData.temperature}°C</p>
-            <p className="text-sm font-medium">Humidity:</p>
-            <p className="text-sm">{sensorData.humidity}%</p>
-            {/* Add more sensor data fields here */}
+    <div className="flex flex-col items-center">
+      <h1 className="text-4xl font-bold mb-4">Live Data</h1>
+      <div className="bg-blue-400 rounded-lg p-6 m-2 shadow-md w-full max-w-md text-white">
+        {data.length > 0 ? (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-xl font-bold">Sensor:</p>
+              <p className="text-xl">{data.at(-1)!.sensor_id}</p>
+            </div>
+            <div className="flex flex-col ">
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm font-bold">Temperature:</p>
+                <p className="text-sm">{data.at(-1)!.temperature}°C</p>
+              </div>
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm font-bold">Humidity:</p>
+                <p className="text-sm">{data.at(-1)!.humidity}%</p>
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        ) : (
+          <p className="text-lg">Loading....</p>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,5 @@
-use std::sync::Arc;
-
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder, get};
+use actix_cors::Cors;
+use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use database::DataProcessor;
 use mongodb::bson::DateTime;
@@ -10,61 +9,33 @@ use temperature_socket::TemperatureSocket;
 mod database;
 mod temperature_socket;
 
-#[actix_web::main]
-async fn main() -> Result<(), std::io::Error> {
-    let mut address: Option<String> = None;
-    let mut port: Option<u16> = None;
-    let mut args = std::env::args();
-
-
-    tokio::spawn(async {
-        let mut instance = DataProcessor::get_instance().await; 
-        Arc::get_mut(&mut instance).unwrap().start_auto_caching().await;
-    });
-
-    args.next();
-    while let Some(arg) = args.next() {
-        match arg.as_str() {
-            "--address" => address = args.next(),
-            "--port" => {
-                port = args
-                    .next()
-                    .expect("Missing value after port argument")
-                    .parse()
-                    .ok()
-            }
-            _ => panic!("Unknown argument {}", arg),
-        }
-    }
-
-    HttpServer::new(|| {
-        App::new()
-            .route("/devices/", web::get().to(get_devices))
-    })
-    .bind((
-        address
-            .expect("Address value was not supplied with --address")
-            .as_str(),
-        port.expect("Port value was not supplied with --port"),
-    ))
-    .unwrap()
-    .run()
-    .await
+async fn hello() -> impl Responder {
+    "Hello, world!"
 }
 
-#[get("/weather/{device_name}/")]
 async fn weather_socket(
     req: HttpRequest,
     stream: web::Payload,
-    device_name: web::Path<String>,
+    device_name: web::Path<(String, )>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let socket = TemperatureSocket::new(device_name.into_inner(), DataProcessor::get_instance().await).await;
+    println!("{:?}", device_name.clone());
+    let socket = TemperatureSocket::new(
+        device_name.into_inner().0,
+        DataProcessor::get_instance().await,
+    )
+    .await;
     ws::start(socket, &req, stream)
 }
 
 async fn get_devices() -> impl Responder {
-    let processor = DataProcessor::get_instance().await;
-    match processor.fetch_all_devices().await {
+    println!("Getting devices");
+    match DataProcessor::get_instance()
+        .await
+        .lock()
+        .await
+        .fetch_all_devices()
+        .await
+    {
         Ok(data) => HttpResponse::Ok().json(data),
         Err(err) => {
             println!("{:?}", err);
@@ -74,20 +45,64 @@ async fn get_devices() -> impl Responder {
 }
 
 #[derive(Deserialize)]
-struct WeatherQuery {
+pub struct WeatherQuery {
     pub limit: Option<i64>,
     pub start: Option<DateTime>,
     pub end: Option<DateTime>,
 }
 
-#[actix_web::get("/weather/")]
 async fn get_weather_data(query: web::Query<WeatherQuery>) -> impl Responder {
     let query = query.into_inner();
 
-    let data = DataProcessor::get_instance().await.fetch_weather(query).await;
+    let data = DataProcessor::get_instance()
+        .await
+        .lock()
+        .await
+        .fetch_weather(query)
+        .await;
 
     match data {
         Ok(data) => HttpResponse::Ok().json(data),
-        Err(_) => HttpResponse::InternalServerError().finish()
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
+
+
+#[actix_web::main]
+async fn main() -> Result<(), std::io::Error> {
+    let mut args = std::env::args();
+
+    let handle = actix::spawn(async {
+        loop {
+            DataProcessor::get_instance()
+                .await
+                .lock()
+                .await
+                .update_cache()
+                .await
+                .unwrap();
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        }
+    });
+
+    let address = std::env::var("HOST_ADDRESS").expect("HOST_ADDRESS not set");
+    let port: u16 = std::env::var("HOST_PORT")
+        .expect("HOST_PORT not set")
+        .parse()
+        .unwrap();
+
+    println!("Starting server on {}:{}", address, port);
+
+    HttpServer::new(|| {
+        let cors = Cors::permissive();
+        App::new()
+            .wrap(cors)
+            .route("/devices", web::get().to(get_devices))
+            .route("/weather", web::get().to(get_weather_data))
+            .route("/weather/{device_name}", web::get().to(weather_socket))
+    })
+    .bind((address.as_str(), port))?
+    .run()
+    .await
+}
+

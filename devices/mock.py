@@ -1,9 +1,10 @@
 import struct
 import socket
 import random
+from time import sleep
 
 
-DEVICE_NAME = "MockDevice"
+DEVICE_NAME = b"MockDevice"
 HOST_ADDRESS = "10.10.0.26"
 HOST_PORT = 7000
 
@@ -18,7 +19,8 @@ def get_pressure():
 
 def gather_data():
     bytes_list = bytearray([0x1, 0x1])
-    bytes_list += DEVICE_NAME.encode('utf-8')
+    bytes_list += DEVICE_NAME
+    bytes_list += bytearray([0x0])
     
     temperature = get_temperature()
     bytes_list += bytearray([0x2])
@@ -34,6 +36,8 @@ def gather_data():
     bytes_list += bytearray([0x5])
     bytes_list += struct.pack('I', pressure)  # 'I' is the format for an unsigned int in struct
     
+    print(bytes_list)
+
     return bytes_list
 
 
@@ -42,3 +46,4 @@ if __name__ == "__main__":
         sock.connect((HOST_ADDRESS, HOST_PORT))
         while True:
             sock.sendall(gather_data())
+            sleep(1)
