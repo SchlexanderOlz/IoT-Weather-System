@@ -225,7 +225,6 @@
                 "/home/schlexander/Arduino/libraries/BH1750/src",
                 "/home/schlexander/Arduino/libraries/SimpleDHT",
                 "/home/schlexander/.arduino15/packages/esp32/hardware/esp32/2.0.9/libraries/WiFi/src",
-                "/home/schlexander/.arduino15/packages/esp32/hardware/esp32/2.0.9/libraries/WiFiClientSecure/src",
                 "/home/schlexander/.arduino15/packages/esp32/hardware/esp32/2.0.9/libraries/SPI/src",
                 "/home/schlexander/.arduino15/packages/esp32/tools/xtensa-esp32-elf-gcc/esp-2021r2-patch5-8.4.0/xtensa-esp32-elf/include/c++/8.4.0",
                 "/home/schlexander/.arduino15/packages/esp32/tools/xtensa-esp32-elf-gcc/esp-2021r2-patch5-8.4.0/xtensa-esp32-elf/include/c++/8.4.0/xtensa-esp32-elf",

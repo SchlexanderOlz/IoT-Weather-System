@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <SimpleDHT.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
+#include <WiFiClient.h>
 #include <string>
 #include <utility>
 #include <sstream>
@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <cstring>
 
-#define WIFI "ScholzLAN", "ScholzLAN"
+#define WIFI "ScholzLAN-5GHz", "ScholzLAN"
 #define IOT_HOST "10.10.0.26", 7000U 
 #define THERM_PIN 2U
 #define INTERVAL 1000U
@@ -36,7 +36,7 @@ namespace device
     string message_;
   };
 
-  WiFiClientSecure connection;
+  WiFiClient connection;
   SimpleDHT11 thermometer;
   BH1750 light_sensor;
   Adafruit_BMP085 pressure_sensor;
@@ -45,7 +45,6 @@ namespace device
 
   bool server_connect()
   {
-    connection.setInsecure();
     Serial.printf("[*]Trying to connect to server on IP: %s Port: %d\n", IOT_HOST);
     return (bool)connection.connect(IOT_HOST);
   }
@@ -53,7 +52,7 @@ namespace device
   bool wifi_connect()
   {
     WiFi.begin(WIFI);
-    delay(1000);
+    delay(2000);
     return WiFi.status() != WL_CONNECTED;
   }
 
